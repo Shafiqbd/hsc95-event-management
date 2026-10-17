@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets / local config
+.env
+.env.*
+!.env.example
+
+# uploaded member photos (back these up with the database, never commit)
+backend/storage/
+backend/.test-storage/
+
+.DS_Store
+*.log

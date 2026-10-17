@@ -1,0 +1,397 @@
+
+
+----------------------------------------------------------------------
+-- Table Creation Script
+----------------------------------------------------------------------
+-- Table: hsc95.T_UserType
+-- DROP TABLE IF EXISTS hsc95."T_UserType";
+
+CREATE TABLE IF NOT EXISTS hsc95."T_UserType"
+(
+    "UserTypeId" numeric(3,0) NOT NULL,
+    "UserTypeName" character varying(15) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "T_UserType_pkey" PRIMARY KEY ("UserTypeId")
+);
+
+
+-- Table: hsc95.T_Users
+-- DROP TABLE IF EXISTS hsc95."T_Users";
+
+CREATE TABLE IF NOT EXISTS hsc95."T_Users"
+(
+    "UserId" integer NOT NULL DEFAULT nextval('hsc95."T_Users_UserId_seq"'::regclass),
+    "FullName" character varying(200) COLLATE pg_catalog."default" NOT NULL,
+    "LoginName" character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    "Password" character varying(128) COLLATE pg_catalog."default" NOT NULL,
+    "Email" character varying(250) COLLATE pg_catalog."default" NOT NULL,
+    "ContactNumber" character varying(11) COLLATE pg_catalog."default",
+    "UserType" numeric(1,0) NOT NULL,
+    "UserStatus" numeric(1,0) NOT NULL DEFAULT 1,
+    CONSTRAINT "T_Users_pkey" PRIMARY KEY ("UserId")
+);
+
+
+-- Table: hsc95.T_EventForm
+-- DROP TABLE IF EXISTS hsc95."T_EventForm";
+
+CREATE TABLE IF NOT EXISTS hsc95."T_EventForm"
+(
+    "EntryId" integer NOT NULL DEFAULT nextval('hsc95."T_EventForm_EntryId_seq"'::regclass),
+    "FormNo" numeric(5,0),
+    "MemberName" text COLLATE pg_catalog."default" NOT NULL,
+    "CollegeName" text COLLATE pg_catalog."default",
+    "ThanaName" text COLLATE pg_catalog."default",
+    "ZilaName" text COLLATE pg_catalog."default",
+    "WorkType" text COLLATE pg_catalog."default",
+    "BloodGroup" character varying(3) COLLATE pg_catalog."default",
+    "WorkPlaceAddress" text COLLATE pg_catalog."default",
+    "MobileNo" character varying(11) COLLATE pg_catalog."default",
+    "FacebookId" text COLLATE pg_catalog."default",
+    "TShirtSize" character varying(3) COLLATE pg_catalog."default" NOT NULL,
+    "IncludeDriver" character(1) COLLATE pg_catalog."default" NOT NULL DEFAULT 'N'::bpchar,
+    "AmountPaid" numeric(7,2) NOT NULL DEFAULT 1500,
+    "EntryDate" timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "EntryBy" numeric(5,0) NOT NULL,
+    "PassCode" character varying(8) COLLATE pg_catalog."default",
+    "MemberLock" character(1) COLLATE pg_catalog."default" NOT NULL DEFAULT 'N'::bpchar,
+    "MemberStatus" numeric(1,0) NOT NULL DEFAULT 1,
+    CONSTRAINT "T_EventForm_pkey" PRIMARY KEY ("EntryId")
+);
+
+
+
+-- Table: hsc95.T_Photos
+-- DROP TABLE IF EXISTS hsc95."T_Photos";
+
+CREATE TABLE IF NOT EXISTS hsc95."T_Photos"
+(
+    "PhotoId" bigint NOT NULL,
+    "EntryId" numeric(20,0) NOT NULL,
+    "PhotoPath" text COLLATE pg_catalog."default" NOT NULL,
+    "PhotoStatus" numeric(1,0) NOT NULL DEFAULT 1,
+    CONSTRAINT "T_Photos_pkey" PRIMARY KEY ("PhotoId")
+);
+
+
+-- Table: hsc95.T_Events
+-- DROP TABLE IF EXISTS hsc95."T_Events";
+
+CREATE TABLE IF NOT EXISTS hsc95."T_Events"
+(
+    "LogId" bigint NOT NULL DEFAULT nextval('hsc95."T_Events_LogId_seq"'::regclass),
+    "EventDate" timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "EventType" character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    "EventText" text COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT "T_Events_pkey" PRIMARY KEY ("LogId")
+);
+
+
+----------------------------------------------------------------------
+-- User Creation Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_insert_user(
+    p_fullname character varying(200),
+    p_loginname character varying(100),
+    p_password character varying(128),
+    p_email character varying(250),
+    p_contactnumber character varying(11),
+    p_usertype numeric(1,0),
+    p_userstatus numeric(1,0) DEFAULT 1
+)
+RETURNS integer AS $$
+DECLARE
+    v_userid integer;
+    v_hashed_password text;
+BEGIN
+    -- 1. Encrypt the password using Blowfish (bf) algorithm with an auto-generated salt
+    v_hashed_password := crypt(p_password, gen_salt('bf', 8));
+
+    -- 2. Insert the record into your T_Users table
+    INSERT INTO hsc95."T_Users" (
+        "FullName", 
+        "LoginName", 
+        "Password", 
+        "Email", 
+        "ContactNumber", 
+        "UserType", 
+        "UserStatus"
+    )
+    VALUES (
+        p_fullname, 
+        p_loginname, 
+        v_hashed_password, 
+        p_email, 
+        p_contactnumber, 
+        p_usertype, 
+        p_userstatus
+    )
+    RETURNING "UserId" INTO v_userid;
+
+    -- 3. Return the newly generated UserId
+    RETURN v_userid;
+END;
+$$ LANGUAGE plpgsql;
+
+
+----------------------------------------------------------------------
+-- User List Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_get_user_list()
+RETURNS TABLE (
+    "UserId" integer,
+    "FullName" character varying(200),
+    "LoginName" character varying(100),
+    "UserTypeName" character varying(15)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u."UserId",
+        u."FullName",
+        u."LoginName",
+        t."UserTypeName"
+    FROM hsc95."T_Users" u
+    INNER JOIN hsc95."T_UserType" t ON u."UserType" = t."UserTypeId"
+    ORDER BY u."UserId" ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+----------------------------------------------------------------------
+-- User Login Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_user_login(
+    p_loginname character varying(100),
+    p_password character varying(128)
+)
+RETURNS TABLE (
+    "UserId" integer,
+    "FullName" character varying(200),
+    "LoginName" character varying(100),
+    "ContactNumber" numeric(11,0),
+    "EmailAddress" character varying(250),
+    "UserTypeName" character varying(15)
+) AS $$
+DECLARE
+    v_userid integer;
+    v_loginname character varying(100);
+BEGIN
+    -- 1. Check if the user exists and credentials match, save identifier details
+    SELECT u."UserId", u."LoginName"
+    INTO v_userid, v_loginname
+    FROM hsc95."T_Users" u
+    WHERE u."LoginName" = p_loginname
+      AND u."Password" = crypt(p_password, u."Password");
+
+    -- 2. If a matching row was found, insert the audit log first
+    IF FOUND THEN
+        INSERT INTO hsc95."T_Events" ("EventType", "EventText")
+        VALUES (
+            'Login', 
+            'User ' || v_loginname || ' (ID: ' || v_userid || ') successfully logged in.'
+        );
+    END IF;
+
+    -- 3. Return the exact matching rows dynamically via RETURN QUERY
+    RETURN QUERY
+    SELECT 
+        u."UserId",
+        u."FullName",
+        u."LoginName",
+        u."ContactNumber",
+        u."Email" AS "EmailAddress",
+        t."UserTypeName"
+    FROM hsc95."T_Users" u
+    INNER JOIN hsc95."T_UserType" t ON u."UserType" = t."UserTypeId"
+    WHERE u."UserId" = v_userid; -- Reuses the validated UserId
+    
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+----------------------------------------------------------------------
+-- Form Entry Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_insert_event_form(
+    p_formno numeric(5,0),
+    p_membername text,
+    p_collegename text,
+    p_thananame text,
+    p_zilaname text,
+    p_worktype text,
+    p_bloodgroup character varying(3),
+    p_workplaceaddress text,
+    p_mobileno character varying(11),
+    p_facebookid text,
+    p_tshirtsize character varying(3),
+    p_entryby numeric(5,0),
+    p_passcode character varying(8),
+    p_includedriver character(1) DEFAULT 'N',
+    p_amountpaid numeric(7,2) DEFAULT 1500.00,
+    p_memberlock character(1) DEFAULT 'N',
+    p_memberstatus numeric(1,0) DEFAULT 1
+)
+RETURNS integer AS $$
+DECLARE
+    v_entryid integer;
+BEGIN
+    -- Insert the record into the T_EventForm table
+    INSERT INTO hsc95."T_EventForm" (
+        "FormNo",
+        "MemberName",
+        "CollegeName",
+        "ThanaName",
+        "ZilaName",
+        "WorkType",
+        "BloodGroup",
+        "WorkPlaceAddress",
+        "MobileNo",
+        "FacebookId",
+        "TShirtSize",
+        "IncludeDriver",
+        "AmountPaid",
+        -- "EntryDate" is skipped here to automatically use the DEFAULT CURRENT_TIMESTAMP
+        "EntryBy",
+        "PassCode",
+        "MemberLock",
+        "MemberStatus"
+    )
+    VALUES (
+        p_formno,
+        p_membername,
+        p_collegename,
+        p_thananame,
+        p_zilaname,
+        p_worktype,
+        p_bloodgroup,
+        p_workplaceaddress,
+        p_mobileno,
+        p_facebookid,
+        p_tshirtsize,
+        p_includedriver,
+        p_amountpaid,
+        p_entryby,
+        p_passcode,
+        p_memberlock,
+        p_memberstatus
+    )
+    RETURNING "EntryId" INTO v_entryid;
+
+    -- Return the newly generated ID
+    RETURN v_entryid;
+END;
+$$ LANGUAGE plpgsql;
+
+----------------------------------------------------------------------
+-- Form Photo Entry Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_insert_event_form_photo(
+    p_entryid numeric(20,0),
+    p_photopath text,
+    p_photostatus numeric(1,0) DEFAULT 1
+)
+RETURNS bigint AS $$
+DECLARE
+    v_new_photoid bigint;
+BEGIN
+    -- 1. If the photo status to be inserted is active (1), 
+    --    deactivate all previous photos for this specific EntryId
+    IF p_photostatus = 1 THEN
+        UPDATE hsc95."T_Photos"
+        SET "PhotoStatus" = 0
+        WHERE "EntryId" = p_entryid;
+    END IF;
+
+    -- 2. Generate a new incremental PhotoId since no auto-sequence is configured
+    SELECT COALESCE(MAX("PhotoId"), 0) + 1
+    INTO v_new_photoid
+    FROM hsc95."T_Photos";
+
+    -- 3. Insert the new photo record
+    INSERT INTO hsc95."T_Photos" (
+        "PhotoId",
+        "EntryId",
+        "PhotoPath",
+        "PhotoStatus"
+    )
+    VALUES (
+        v_new_photoid,
+        p_entryid,
+        p_photopath,
+        p_photostatus
+    );
+
+    -- Return the newly generated PhotoId
+    RETURN v_new_photoid;
+END;
+$$ LANGUAGE plpgsql;
+
+
+----------------------------------------------------------------------
+-- SMS Content Selection Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_prepare_sms()
+RETURNS TABLE (
+    "SMS" text,
+    "MobileNo" character varying(11)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        'Dear ' || "MemberName" || ', Your registration is complete. Your token no will be send very soon. Thank you for participate. HSC 95 Society (30 Years celebration)'::text AS "SMS",
+        "MobileNo"
+    FROM hsc95."T_EventForm"
+    ORDER BY "EntryId" ASC;
+END;
+$$ LANGUAGE plpgsql;
+----------------------------------------------------------------------
+-- Token Circulation SMS Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_SendToken_sms()
+RETURNS TABLE (
+    "SMS" text,
+    "MobileNo" character varying(11)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        'Dear ' || "MemberName" || ', Your Token Number is "||"PassCode"||". HSC 95 Society (30 Years celebration)'::text AS "SMS",
+        "MobileNo"
+    FROM hsc95."T_EventForm"
+    ORDER BY "EntryId" ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+----------------------------------------------------------------------
+-- Entry Pass Cretion (JPG Image) Function
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_prepare_entrypass()
+RETURNS TABLE (
+    "MemberName" text,
+    "FormNo" numeric(5,0),
+    "MobileNo" character varying(11),
+    "PhotoPath" text
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        f."MemberName",
+        f."FormNo",
+        f."MobileNo",
+        p."PhotoPath"
+    FROM hsc95."T_EventForm" f
+    -- Join numeric(20,0) with integer; PostgreSQL automatically handles this numeric comparison safely
+    INNER JOIN hsc95."T_Photos" p ON f."EntryId" = p."EntryId"
+    -- Only return the active profile image
+    WHERE p."PhotoStatus" = 1
+    ORDER BY f."EntryId" ASC;
+END;
+$$ LANGUAGE plpgsql;
