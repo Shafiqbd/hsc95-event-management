@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Response } from 'express';
+import { translateDatabaseError } from '../database/database-errors.js';
 
 export interface ApiErrorBody {
   error: {
@@ -18,8 +19,10 @@ export interface ApiErrorBody {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('Exceptions');
 
-  catch(exception: unknown, host: ArgumentsHost): void {
+  catch(raw: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
+    // Database failures become a safe 503; the real cause is only logged.
+    const exception = translateDatabaseError(raw, this.logger) ?? raw;
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();

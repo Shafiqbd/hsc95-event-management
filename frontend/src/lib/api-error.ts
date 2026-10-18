@@ -22,8 +22,7 @@ export function errorMessage(error: unknown): string {
       case 404:
         return "তথ্য পাওয়া যায়নি।";
       case 409:
-        if (/form number/i.test(error.message)) return "এই ফরম নম্বরে ইতিমধ্যে নিবন্ধন করা হয়েছে।";
-        if (/mobile/i.test(error.message)) return "এই মোবাইল নম্বর দিয়ে ইতিমধ্যে নিবন্ধন করা হয়েছে।";
+        if (/form number/i.test(error.message)) return "এই টোকেন নম্বরে ইতিমধ্যে নিবন্ধন করা হয়েছে।";
         if (/login/i.test(error.message)) return "This login name is already taken.";
         return error.message;
       case 413:

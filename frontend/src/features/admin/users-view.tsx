@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Alert, Badge, Card, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { boxInputClass, fieldAria } from "@/components/ui/form-line";
+import { useToast } from "@/components/ui/toast";
 import { normalizeMobile } from "@/features/registration/schema";
 import { useAsync } from "@/hooks/use-async";
 import { api, errorMessage } from "@/lib/api";
@@ -66,7 +67,7 @@ function UsersContent() {
       {users.loading && !users.data && <Skeleton className="h-72 w-full" />}
       {users.data && users.data.length === 0 && <EmptyState icon={Users} title="No users yet" />}
       {users.data && users.data.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
+        <div className="overflow-x-auto rounded-md border border-border bg-surface">
           <table className="w-full min-w-[36rem] text-left text-sm">
             <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-muted">
               <tr>
@@ -98,6 +99,7 @@ function UsersContent() {
 }
 
 function CreateUserForm({ onCreated }: { onCreated: () => void }) {
+  const toast = useToast();
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const {
     register,
@@ -120,7 +122,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
         role: values.role,
         password: values.password,
       });
-      setMessage({ tone: "success", text: `User "${values.loginName}" created as ${ROLE_LABEL[values.role]}.` });
+      toast.success("User created", `"${values.loginName}" can now sign in as ${ROLE_LABEL[values.role]}.`);
       reset();
       onCreated();
     } catch (error) {
@@ -136,6 +138,11 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
     <div className="space-y-1">
       <label htmlFor={`new-${name}`} className="text-sm font-medium">
         {label}
+        {props.required && (
+          <span className="ml-0.5 text-danger" aria-hidden>
+            *
+          </span>
+        )}
       </label>
       <input
         {...register(name)}
@@ -158,21 +165,26 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
       </h2>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
-          {field("fullName", "Full name", { autoComplete: "off" })}
-          {field("loginName", "Login name", { autoComplete: "off" })}
-          {field("email", "E-mail", { type: "email", autoComplete: "off" })}
+          {field("fullName", "Full name", { required: true, autoComplete: "off" })}
+          {field("loginName", "Login name", { required: true, autoComplete: "off" })}
+          {field("email", "E-mail", { required: true, type: "email", autoComplete: "off" })}
           {field("contactNumber", "Contact number (optional)", { type: "tel", placeholder: "01XXXXXXXXX" })}
-          {field("password", "Password", { type: "password", autoComplete: "new-password" })}
-          {field("confirmPassword", "Repeat password", { type: "password", autoComplete: "new-password" })}
+          {field("password", "Password", { required: true, type: "password", autoComplete: "new-password" })}
+          {field("confirmPassword", "Repeat password", { required: true, type: "password", autoComplete: "new-password" })}
         </div>
 
         <fieldset>
-          <legend className="mb-2 text-sm font-medium">User type</legend>
+          <legend className="mb-2 text-sm font-medium">
+            User type
+            <span className="ml-0.5 text-danger" aria-hidden>
+              *
+            </span>
+          </legend>
           <div className="grid gap-3 sm:grid-cols-3">
             {(Object.keys(ROLE_HELP) as Role[]).map((role) => (
               <label
                 key={role}
-                className="cursor-pointer rounded-xl border-2 border-border bg-surface-2 p-3 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
+                className="cursor-pointer rounded-md border-2 border-border bg-surface-2 p-3 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
               >
                 <input type="radio" value={role} {...register("role")} className="sr-only" />
                 <span className="block font-semibold">{ROLE_LABEL[role]}</span>

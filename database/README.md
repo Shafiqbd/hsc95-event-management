@@ -27,7 +27,9 @@ Every SQL statement the backend can issue is listed in
    ```
    It must go in `public`: the functions call `crypt()` unqualified and the search path is
    `"$user", public`.
-2. **FIX A** from `proposed/002_fix_existing_functions.sql` (`sp_user_login` return type).
+2. ~~FIX A~~ — optional now. `sp_user_login` is owned by `postgres`, so the app role cannot
+   replace it; the app logs in with **`sp_staff_login`** *(001)*, the same logic with a working
+   result type. Apply FIX A only if something else needs `sp_user_login`.
 3. **`migrations/001_app_support_functions.sql`.**
 4. **First admin:** `cd backend && npm run build && npm run create-user -- --name "…" --login admin --email … --role admin`
    (asks for the password; calls `sp_insert_user`).
@@ -49,11 +51,12 @@ verification notes in the main README).
 
 | Function | Source | Used for |
 |---|---|---|
-| `sp_user_login` | db.txt | Credential check for both login pages |
+| `sp_user_login` | db.txt | Not used (broken result type, see FIX A); replaced by `sp_staff_login` *(001)* |
+| `sp_staff_login` | 001 | Credential check at login (crypt() + "Login" row in `T_Events`, like `sp_user_login`) |
 | `sp_insert_user` | db.txt | Creating staff users (Admin → Users page, `npm run create-user`) |
 | `sp_insert_event_form` | db.txt | Saving the registration |
 | `sp_insert_event_form_photo` | db.txt | Saving the photo path (deactivates older photos) |
-| `sp_prepare_entrypass` | db.txt | **Print All Tokens** |
+| `sp_prepare_entrypass` | db.txt | Not used (no college / T-shirt / driver columns; `sp_get_entrypass_by_ids` replaces it) |
 | `sp_get_user_list` | db.txt | Admin → Users |
 | `sp_prepare_sms`, `sp_SendToken_sms` | db.txt | Not used (no SMS gateway in scope; both are broken — see below) |
 | `sp_get_session_user` | 001 | `UserStatus` / role check at login and on **every** authenticated request |
@@ -71,8 +74,7 @@ verification notes in the main README).
 `sp_get_dashboard_stats` and `sp_get_tshirt_summary` take a trailing `p_entryby integer`
 (default `NULL`). When it is set, only forms whose `T_EventForm."EntryBy"` equals it are returned;
 `NULL` returns everything. The API passes the signed-in user's id for Register users and `NULL`
-for Admin / Report Viewer. For a Register user's "print all", `sp_get_entrypass_by_ids(NULL, <id>)`
-is used; others use the supplied `sp_prepare_entrypass()`.
+for Admin / Report Viewer. "Print all" uses `sp_get_entrypass_by_ids(NULL, <id or NULL>)`.
 
 ## Bugs found in `db.txt` (verified on PostgreSQL 16)
 
@@ -99,7 +101,7 @@ is used; others use the supplied `sp_prepare_entrypass()`.
 | Enforce `UserStatus`, re-validate sessions | `sp_user_login` returns no status; no lookup by id | `sp_get_session_user` *(001)* | `(p_userid int)` → user + `UserTypeName` + `UserStatus` | Called per request so deactivation applies immediately |
 | List / search / page registrations | `sp_prepare_entrypass` has 4 columns, only rows with photos, no paging | `sp_get_registration_list` *(001)* | `(p_search text, p_limit int, p_offset int)` → rows + `TotalCount` | `strpos` matching (no LIKE-wildcard injection); limit clamped to 500 |
 | Registration by id | none | `sp_get_registration_by_id` *(001)* | `(p_entryid int)` → registration | Admin-only endpoint |
-| Print selected tokens | `sp_prepare_entrypass` has no filter and no `EntryId` | `sp_get_entrypass_by_ids` *(001)* | `(p_entryids int[])` → `EntryId, MemberName, FormNo, MobileNo, PhotoPath` | Same eligibility rule as `sp_prepare_entrypass` |
+| Print selected tokens | `sp_prepare_entrypass` has no filter and no `EntryId` | `sp_get_entrypass_by_ids` *(001)* | `(p_entryids int[])` → `EntryId, MemberName, FormNo, MobileNo, PhotoPath, CollegeName, TShirtSize, IncludeDriver` | Same eligibility rule as `sp_prepare_entrypass` |
 | Generate unique form numbers | `FormNo` is nullable, no sequence/generator | `sp_get_next_form_no` *(001)* | `()` → `numeric(5,0)` = `MAX+1` | Transaction-scoped advisory lock; recommend unique index (003) |
 | Duplicate prevention | No unique constraint on `MobileNo` / `FormNo` / `LoginName` | `sp_check_registration_duplicate`, `sp_check_login_exists` *(001)* | `(p_mobileno, p_formno)` → 2 booleans; `(p_loginname)` → boolean | Advisory locks → race-free check-then-insert |
 | Dashboard statistics | none | `sp_get_dashboard_stats`, `sp_get_tshirt_summary` *(001)* | `()` → counts / sums | Read-only aggregates |

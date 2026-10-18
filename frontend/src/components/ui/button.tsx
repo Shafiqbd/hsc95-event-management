@@ -10,7 +10,7 @@ type Size = "sm" | "md" | "lg";
  * hover, settling back when pressed.
  */
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 ease-out " +
+  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-semibold transition-all duration-200 ease-out " +
   "hover:-translate-y-0.5 hover:brightness-[1.15] active:translate-y-0 active:brightness-95 " +
   "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100 focus-visible:outline-2";
 

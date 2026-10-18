@@ -1,13 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Car, CheckCircle2, ClipboardList, FileDown, Info, Printer, UserPlus } from "lucide-react";
+import { Car, CheckCircle2, ChevronDown, ClipboardList, FileDown, Info, Printer, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Controller, useForm, useWatch, type DefaultValues } from "react-hook-form";
 import { Emblem } from "@/components/brand";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { fieldAria, FormLine, lineInputClass } from "@/components/ui/form-line";
+import { useToast } from "@/components/ui/toast";
 import { BLOOD_GROUPS, EVENT, T_SHIRT_SIZES } from "@/config/event";
 import { api, errorMessage } from "@/lib/api";
 import { formatFormNo, formatTaka, toBnDigits } from "@/lib/format";
@@ -36,7 +37,10 @@ interface Saved {
   result: RegistrationResult;
   memberName: string;
   mobileNo: string;
-  photo: File;
+  collegeName?: string;
+  tShirtSize: string;
+  includeDriver: boolean;
+  photo?: File;
 }
 
 /** Paper-form entry used by Register and Admin users. */
@@ -46,6 +50,7 @@ export function RegistrationForm() {
     driverFee: EVENT.displayFees.driver,
   });
   const [serverError, setServerError] = useState<string | null>(null);
+  const toast = useToast();
   const [saved, setSaved] = useState<Saved | null>(null);
   const submitting = useRef(false);
 
@@ -81,7 +86,16 @@ export function RegistrationForm() {
     setServerError(null);
     try {
       const result = await api.register(toFormData(values));
-      setSaved({ result, memberName: values.memberName, mobileNo: values.mobileNo, photo: values.photo });
+      setSaved({
+        result,
+        memberName: values.memberName,
+        mobileNo: values.mobileNo,
+        collegeName: values.collegeName,
+        tShirtSize: values.tShirtSize,
+        includeDriver: values.includeDriver,
+        photo: values.photo,
+      });
+      toast.success("নিবন্ধন সম্পন্ন হয়েছে", `${values.memberName} · টোকেন নং ${formatFormNo(result.formNo)}`);
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     } catch (error) {
@@ -116,11 +130,11 @@ export function RegistrationForm() {
   const e = errors;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="rounded-2xl border border-border bg-surface shadow-soft">
+    <form onSubmit={onSubmit} noValidate className="rounded-md border border-border bg-surface shadow-soft">
       {/* Header, as on the paper form */}
-      <div className="flex flex-col gap-6 border-b border-border p-6 sm:flex-row sm:items-start sm:p-8">
+      <div className="flex flex-col gap-6 border-b border-border p-6 sm:flex-row  sm:p-8 items-center j">
         <div className="flex flex-1 items-start gap-4">
-          <Emblem size={84} />
+          <Emblem size={100} />
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-primary sm:text-3xl">{EVENT.societyName}</h1>
             <p className="text-lg font-semibold text-danger">{EVENT.celebration}</p>
@@ -144,13 +158,13 @@ export function RegistrationForm() {
       <div className="space-y-5 p-6 sm:p-8">
         <FormLine
           id="formNo"
-          label="ফরম নং"
+          label="টোকেন নং"
           error={e.formNo?.message}
-          hint="কাগজের ফরমের নম্বর লিখুন। খালি রাখলে পরবর্তী নম্বর স্বয়ংক্রিয়ভাবে দেওয়া হবে।"
+          hint="কাগজের টোকেন নম্বর লিখুন"
         >
           <input
             {...register("formNo")}
-            {...fieldAria("formNo", e.formNo?.message, "কাগজের ফরমের নম্বর লিখুন। খালি রাখলে পরবর্তী নম্বর স্বয়ংক্রিয়ভাবে দেওয়া হবে।")}
+            {...fieldAria("formNo", e.formNo?.message, "কাগজের টোকেন নম্বর লিখুন।")}
             inputMode="numeric"
             autoFocus
             className={`${lineInputClass} max-w-40`}
@@ -179,14 +193,21 @@ export function RegistrationForm() {
             <input {...register("workType")} {...fieldAria("workType", e.workType?.message)} autoComplete="organization-title" className={lineInputClass} />
           </FormLine>
           <FormLine id="bloodGroup" label="রক্তের গ্রুপ" error={e.bloodGroup?.message} className="lg:grid-cols-[7rem_1fr]">
-            <select {...register("bloodGroup")} {...fieldAria("bloodGroup", e.bloodGroup?.message)} className={`${lineInputClass} bg-surface`}>
-              <option value="">নির্বাচন করুন</option>
-              {BLOOD_GROUPS.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                {...register("bloodGroup")}
+                {...fieldAria("bloodGroup", e.bloodGroup?.message)}
+                className={`${lineInputClass} cursor-pointer appearance-none pr-7 [&_option]:bg-surface [&_option]:text-fg`}
+              >
+                <option value="">নির্বাচন করুন</option>
+                {BLOOD_GROUPS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+            </div>
           </FormLine>
         </div>
 
@@ -194,10 +215,10 @@ export function RegistrationForm() {
           <textarea {...register("workPlaceAddress")} {...fieldAria("workPlaceAddress", e.workPlaceAddress?.message)} rows={2} className={`${lineInputClass} resize-y`} />
         </FormLine>
 
-        <FormLine id="mobileNo" label="মোবাইল নং" required error={e.mobileNo?.message} hint="একই মোবাইল নম্বরে দুইবার নিবন্ধন করা যাবে না">
+        <FormLine id="mobileNo" label="মোবাইল নং" required error={e.mobileNo?.message} hint="মোবাইল নম্বর লিখুন ">
           <input
             {...register("mobileNo")}
-            {...fieldAria("mobileNo", e.mobileNo?.message, "একই মোবাইল নম্বরে দুইবার নিবন্ধন করা যাবে না")}
+            {...fieldAria("mobileNo", e.mobileNo?.message, "মোবাইল নম্বর লিখুন")}
             type="tel"
             inputMode="tel"
             autoComplete="tel"
@@ -221,7 +242,7 @@ export function RegistrationForm() {
               {T_SHIRT_SIZES.map((size) => (
                 <label
                   key={size.value}
-                  className="flex cursor-pointer flex-col items-center rounded-xl border-2 border-border bg-surface-2 px-3 py-3 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
+                  className="flex cursor-pointer flex-col items-center rounded-md border-2 border-border bg-surface-2 px-3 py-3 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
                 >
                   <input type="radio" value={size.value} {...register("tShirtSize")} className="sr-only" />
                   <span className="text-lg font-bold">{size.label}</span>
@@ -239,7 +260,7 @@ export function RegistrationForm() {
 
         <div className="grid gap-2 sm:grid-cols-[9.5rem_1fr] sm:gap-3">
           <span className="text-[15px] font-medium">ড্রাইভার :</span>
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-border bg-surface-2 p-3 has-checked:border-success has-checked:bg-success/10">
+          <label className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-border bg-surface-2 p-3 has-checked:border-success has-checked:bg-success/10">
             <input type="checkbox" {...register("includeDriver")} className="h-5 w-5 accent-[var(--success)]" />
             <Car className="h-5 w-5 text-success" aria-hidden />
             <span>
@@ -282,31 +303,37 @@ export function RegistrationForm() {
 
 function RegistrationSuccess({ saved, onNext }: { saved: Saved; onNext: () => void }) {
   const { result } = saved;
-  const photoUrl = useMemo(() => URL.createObjectURL(saved.photo), [saved.photo]);
-  useEffect(() => () => URL.revokeObjectURL(photoUrl), [photoUrl]);
+  const photoUrl = useMemo(() => (saved.photo ? URL.createObjectURL(saved.photo) : null), [saved.photo]);
+  useEffect(() => {
+    if (!photoUrl) return;
+    return () => URL.revokeObjectURL(photoUrl);
+  }, [photoUrl]);
   const token: TokenData = {
     entryId: result.entryId,
     memberName: saved.memberName,
     formNo: result.formNo,
     mobileNo: saved.mobileNo,
     photoUrl,
+    collegeName: saved.collegeName || null,
+    tShirtSize: saved.tShirtSize,
+    includeDriver: saved.includeDriver,
   };
   const printer = usePrintTokens();
   const pdf = usePdfDownload();
 
   return (
-    <div className="grid gap-6 rounded-2xl border border-success/40 bg-surface p-6 shadow-soft sm:p-8 lg:grid-cols-[1fr_17rem]">
+    <div className="grid gap-6 rounded-md border border-success/40 bg-surface p-6 shadow-soft sm:p-8 lg:grid-cols-[1fr_17rem]">
       <div>
         <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
         <h1 className="mt-3 text-2xl font-bold">নিবন্ধন সম্পন্ন হয়েছে!</h1>
         <p className="mt-1 text-muted">{saved.memberName} — তথ্য সংরক্ষণ করা হয়েছে।</p>
 
         <dl className="mt-6 grid max-w-md gap-3">
-          <div className="flex justify-between rounded-xl bg-surface-2 px-4 py-3">
-            <dt className="text-muted">ফরম নং</dt>
+          <div className="flex justify-between rounded-md bg-surface-2 px-4 py-3">
+            <dt className="text-muted">টোকেন নং</dt>
             <dd className="font-bold">{formatFormNo(result.formNo)}</dd>
           </div>
-          <div className="flex justify-between rounded-xl bg-surface-2 px-4 py-3">
+          <div className="flex justify-between rounded-md bg-surface-2 px-4 py-3">
             <dt className="text-muted">টাকার পরিমাণ</dt>
             <dd className="font-bold text-gold">{formatTaka(result.amountPaid)}</dd>
           </div>
@@ -323,7 +350,7 @@ function RegistrationSuccess({ saved, onNext }: { saved: Saved; onNext: () => vo
       </div>
 
       <div className="space-y-3">
-        <div className="overflow-hidden rounded-lg ring-1 ring-border">
+        <div className="overflow-hidden rounded-md ring-1 ring-border">
           <EntryPass token={token} />
         </div>
         <Button

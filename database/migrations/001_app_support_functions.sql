@@ -267,11 +267,16 @@ $$ LANGUAGE plpgsql STABLE;
 ----------------------------------------------------------------------
 -- 7. Entry-pass data for selected registrations
 --    Gap: sp_prepare_entrypass() has no filter and does not return
---    EntryId, so a selection cannot be printed. Same eligibility rule as
---    sp_prepare_entrypass (an active photo must exist), plus EntryId.
---    p_entryids NULL = every eligible form (used for a Register user's
---    "print all", limited to their own entries).
+--    EntryId, so a selection cannot be printed. Eligible = active
+--    registration (MemberStatus = 1) with a form number; the photo is
+--    optional (PhotoPath is NULL when there is no active photo).
+--    p_entryids NULL = every eligible form (used for "print all"; for a
+--    Register user limited to their own entries). Also returns college,
+--    T-shirt size and driver flag for the PDF token.
 ----------------------------------------------------------------------
+
+-- The result columns changed, which CREATE OR REPLACE cannot do in place.
+DROP FUNCTION IF EXISTS hsc95.sp_get_entrypass_by_ids(integer[], integer);
 
 CREATE OR REPLACE FUNCTION hsc95.sp_get_entrypass_by_ids(
     p_entryids integer[],
@@ -282,7 +287,10 @@ RETURNS TABLE (
     "MemberName" text,
     "FormNo" numeric(5,0),
     "MobileNo" character varying(11),
-    "PhotoPath" text
+    "PhotoPath" text,
+    "CollegeName" text,
+    "TShirtSize" character varying(3),
+    "IncludeDriver" character(1)
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -291,10 +299,20 @@ BEGIN
         f."MemberName",
         f."FormNo",
         f."MobileNo",
-        p."PhotoPath"
+        ph."PhotoPath",
+        f."CollegeName",
+        f."TShirtSize",
+        f."IncludeDriver"
     FROM hsc95."T_EventForm" f
-    INNER JOIN hsc95."T_Photos" p ON f."EntryId" = p."EntryId"
-    WHERE p."PhotoStatus" = 1
+    LEFT JOIN LATERAL (
+        SELECT p."PhotoPath"
+        FROM hsc95."T_Photos" p
+        WHERE p."EntryId" = f."EntryId" AND p."PhotoStatus" = 1
+        ORDER BY p."PhotoId" DESC
+        LIMIT 1
+    ) ph ON TRUE
+    WHERE f."MemberStatus" = 1
+      AND f."FormNo" IS NOT NULL
       AND (p_entryids IS NULL OR f."EntryId" = ANY (p_entryids))
       AND (p_entryby IS NULL OR f."EntryBy" = p_entryby)
     ORDER BY f."EntryId" ASC;
@@ -329,7 +347,7 @@ BEGIN
         COUNT(*) FILTER (WHERE f."IncludeDriver" = 'Y'),
         COALESCE(SUM(f."AmountPaid"), 0),
         COUNT(*) FILTER (WHERE ph.has_photo),
-        COUNT(*) FILTER (WHERE ph.has_photo AND f."FormNo" IS NOT NULL),
+        COUNT(*) FILTER (WHERE f."MemberStatus" = 1 AND f."FormNo" IS NOT NULL),
         COUNT(*) FILTER (WHERE f."PassCode" IS NOT NULL AND f."PassCode" <> ''),
         COUNT(*) FILTER (WHERE f."EntryDate"::date = CURRENT_DATE)
     FROM hsc95."T_EventForm" f
@@ -365,3 +383,60 @@ BEGIN
     ORDER BY f."TShirtSize";
 END;
 $$ LANGUAGE plpgsql STABLE;
+
+
+----------------------------------------------------------------------
+-- 10. Staff login
+--    Gap: db.txt's sp_user_login declares "ContactNumber" numeric(11,0)
+--    but returns the varchar column, so every call fails (see FIX A in
+--    proposed/002). sp_user_login is owned by postgres and cannot be
+--    replaced by the application role, so this is the same logic with a
+--    correct result type: crypt() password check, the same "Login" row in
+--    T_Events, and the same columns (ContactNumber as text).
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_staff_login(
+    p_loginname character varying(100),
+    p_password character varying(128)
+)
+RETURNS TABLE (
+    "UserId" integer,
+    "FullName" character varying(200),
+    "LoginName" character varying(100),
+    "ContactNumber" character varying(11),
+    "EmailAddress" character varying(250),
+    "UserTypeName" character varying(15)
+) AS $$
+DECLARE
+    v_userid integer;
+    v_loginname character varying(100);
+BEGIN
+    SELECT u."UserId", u."LoginName"
+    INTO v_userid, v_loginname
+    FROM hsc95."T_Users" u
+    WHERE u."LoginName" = p_loginname
+      AND u."Password" = public.crypt(p_password, u."Password");
+
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    INSERT INTO hsc95."T_Events" ("EventType", "EventText")
+    VALUES (
+        'Login',
+        'User ' || v_loginname || ' (ID: ' || v_userid || ') successfully logged in.'
+    );
+
+    RETURN QUERY
+    SELECT
+        u."UserId",
+        u."FullName",
+        u."LoginName",
+        u."ContactNumber",
+        u."Email",
+        t."UserTypeName"
+    FROM hsc95."T_Users" u
+    INNER JOIN hsc95."T_UserType" t ON u."UserType" = t."UserTypeId"
+    WHERE u."UserId" = v_userid;
+END;
+$$ LANGUAGE plpgsql;

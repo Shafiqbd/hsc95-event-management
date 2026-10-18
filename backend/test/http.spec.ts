@@ -3,8 +3,8 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
-import { DatabaseService, PG_POOL } from '../src/database/database.service.js';
-import { FakeDatabase, JPEG, sessionRow, TEST_ENV } from './helpers.js';
+import { DataSource } from 'typeorm';
+import { FakeDataSource, JPEG, sessionRow, TEST_ENV } from './helpers.js';
 
 /**
  * HTTP-level tests of the real Nest pipeline (guards, pipes, filters,
@@ -12,7 +12,7 @@ import { FakeDatabase, JPEG, sessionRow, TEST_ENV } from './helpers.js';
  */
 describe('HTTP API', () => {
   let app: INestApplication;
-  const db = new FakeDatabase();
+  const db = new FakeDataSource();
   const users: Record<number, ReturnType<typeof sessionRow>> = {
     1: sessionRow({ UserId: 1, UserTypeName: 'Admin', LoginName: 'admin' }),
     2: sessionRow({ UserId: 2, UserTypeName: 'Register', LoginName: 'desk1' }),
@@ -21,7 +21,7 @@ describe('HTTP API', () => {
 
   beforeAll(async () => {
     Object.assign(process.env, TEST_ENV);
-    db.on('sp_user_login', ([login, password]) => {
+    db.on('sp_staff_login', ([login, password]) => {
       const user = Object.values(users).find((u) => u.LoginName === login);
       return user && password === 'pw' ? [{ ...user, EmailAddress: user.Email }] : [];
     })
@@ -43,9 +43,7 @@ describe('HTTP API', () => {
       .on('sp_insert_event_form_photo', () => [{ PhotoId: '1' }]);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PG_POOL)
-      .useValue({ end: async () => undefined })
-      .overrideProvider(DatabaseService)
+      .overrideProvider(DataSource)
       .useValue(db)
       .compile();
     app = moduleRef.createNestApplication();
@@ -125,7 +123,7 @@ describe('HTTP API', () => {
     const res = await post(await cookieFor('desk1'));
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ entryId: 9, formNo: 1, amountPaid: 1500 });
-    expect(db.calls.find((c) => c.name === 'hsc95.sp_insert_event_form')?.params[11]).toBe(2);
+    expect(db.calls.find((c) => c.name === 'sp_insert_event_form')?.params[11]).toBe(2);
   });
 
   it('only Admin can list and create users; duplicates are refused', async () => {
@@ -142,7 +140,7 @@ describe('HTTP API', () => {
     expect(ok.status).toBe(201);
     expect(ok.body.data).toEqual({ userId: 50 });
     // UserType id for "viewer" from config (default 3)
-    expect(db.calls.find((c) => c.name === 'hsc95.sp_insert_user')?.params[5]).toBe(3);
+    expect(db.calls.find((c) => c.name === 'sp_insert_user')?.params[5]).toBe(3);
 
     expect((await create(admin, { ...newUser('admin'), loginName: 'admin' })).status).toBe(409);
     expect((await create(admin, { ...newUser('superuser') })).status).toBe(400);
@@ -151,7 +149,7 @@ describe('HTTP API', () => {
 
   it('Register users only read forms they entered; Admin and Report Viewer read all', async () => {
     const server = app.getHttpServer();
-    const lastParams = (fn: string) => db.calls.filter((c) => c.name === `hsc95.${fn}`).at(-1)?.params;
+    const lastParams = (fn: string) => db.calls.filter((c) => c.name === fn).at(-1)?.params;
 
     for (const [login, scope] of [['desk1', 2], ['admin', null], ['viewer', null]] as const) {
       const cookie = await cookieFor(login);
@@ -171,14 +169,14 @@ describe('HTTP API', () => {
     expect((await request(server).get('/api/admin/registrations/5').set('Cookie', desk)).status).toBe(404);
     expect(lastParams('sp_get_registration_by_id')).toEqual([5, 2]);
 
-    // "Print all": Register gets only their own eligible forms; others use sp_prepare_entrypass.
+    // "Print all": Register gets only their own eligible forms; others get every eligible form.
     db.calls.length = 0;
     await request(server).get('/api/admin/tokens/print-data').set('Cookie', desk);
     expect(lastParams('sp_get_entrypass_by_ids')).toEqual([null, 2]);
-    expect(lastParams('sp_prepare_entrypass')).toBeUndefined();
     db.calls.length = 0;
     await request(server).get('/api/admin/tokens/print-data').set('Cookie', await cookieFor('viewer'));
-    expect(lastParams('sp_prepare_entrypass')).toEqual([]);
+    expect(lastParams('sp_get_entrypass_by_ids')).toEqual([null, null]);
+    expect(lastParams('sp_prepare_entrypass')).toBeUndefined();
   });
 
   it('rejects a forged session cookie', async () => {

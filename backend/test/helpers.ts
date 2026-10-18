@@ -1,5 +1,4 @@
 import { loadConfig, type AppConfig } from '../src/config/app-config.js';
-import { buildDbFunctions, type DbFunction } from '../src/database/db-functions.js';
 
 export const TEST_ENV = {
   NODE_ENV: 'test',
@@ -20,36 +19,35 @@ export function testConfig(overrides: Record<string, string> = {}): AppConfig {
 type Handler = (params: readonly unknown[]) => unknown[] | Promise<unknown[]>;
 
 /**
- * In-memory stand-in for DatabaseService: each database function name maps
- * to a handler returning rows. Records every call for assertions.
+ * In-memory stand-in for the TypeORM DataSource: each database function name
+ * (sp_...) maps to a handler returning rows. Records every call.
  */
-export class FakeDatabase {
-  readonly fn = buildDbFunctions('hsc95');
+export class FakeDataSource {
   readonly calls: { name: string; params: readonly unknown[] }[] = [];
+  readonly sql: string[] = [];
   private readonly handlers = new Map<string, Handler>();
   committed = 0;
   rolledBack = 0;
+  isInitialized = true;
 
   on(name: string, handler: Handler): this {
-    this.handlers.set(`hsc95.${name}`, handler);
+    this.handlers.set(name, handler);
     return this;
   }
 
-  async call<T>(dbFn: DbFunction, params: readonly unknown[] = []): Promise<T[]> {
-    this.calls.push({ name: dbFn.name, params });
-    const handler = this.handlers.get(dbFn.name);
-    if (!handler) throw new Error(`No fake for ${dbFn.name}`);
-    return (await handler(params)) as T[];
-  }
+  query = async (sql: string, params: readonly unknown[] = []): Promise<unknown[]> => {
+    const name = /\b(sp_\w+)\s*\(/.exec(sql)?.[1];
+    if (!name) throw new Error(`Not a database function call: ${sql}`);
+    this.sql.push(sql);
+    this.calls.push({ name, params });
+    const handler = this.handlers.get(name);
+    if (!handler) throw new Error(`No fake for ${name}`);
+    return handler(params);
+  };
 
-  async callOne<T>(dbFn: DbFunction, params: readonly unknown[] = []): Promise<T | null> {
-    const rows = await this.call<T>(dbFn, params);
-    return rows[0] ?? null;
-  }
-
-  async transaction<T>(work: (client: unknown) => Promise<T>): Promise<T> {
+  async transaction<T>(work: (manager: { query: FakeDataSource['query'] }) => Promise<T>): Promise<T> {
     try {
-      const result = await work({});
+      const result = await work({ query: this.query });
       this.committed += 1;
       return result;
     } catch (error) {
@@ -58,8 +56,10 @@ export class FakeDatabase {
     }
   }
 
+  async destroy(): Promise<void> {}
+
   called(name: string): boolean {
-    return this.calls.some((c) => c.name === `hsc95.${name}`);
+    return this.calls.some((c) => c.name === name);
   }
 }
 

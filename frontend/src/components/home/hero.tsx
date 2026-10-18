@@ -78,10 +78,10 @@ export function Hero() {
             <span className="mt-2 block text-3xl text-fg sm:text-4xl">{EVENT.celebration}</span>
           </h1>
           <ul className="animate-fade-up mt-6 flex flex-wrap gap-3 text-sm" style={delay(0.2)}>
-            <li className="inline-flex items-center gap-2 rounded-lg bg-surface/70 px-3 py-2 ring-1 ring-border backdrop-blur">
+            <li className="inline-flex items-center gap-2 rounded-md bg-surface/70 px-3 py-2 ring-1 ring-border backdrop-blur">
               <CalendarDays className="h-4 w-4 text-primary" aria-hidden /> {EVENT.dateBn}
             </li>
-            <li className="inline-flex items-center gap-2 rounded-lg bg-surface/70 px-3 py-2 ring-1 ring-border backdrop-blur">
+            <li className="inline-flex items-center gap-2 rounded-md bg-surface/70 px-3 py-2 ring-1 ring-border backdrop-blur">
               <MapPin className="h-4 w-4 text-violet" aria-hidden /> {EVENT.venue}
             </li>
           </ul>

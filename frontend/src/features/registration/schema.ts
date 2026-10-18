@@ -30,8 +30,8 @@ export const registrationSchema = z.object({
   formNo: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^[0-9০-৯]{1,5}$/.test(v), "ফরম নম্বর ১ থেকে ৯৯৯৯৯ এর মধ্যে হতে হবে")
-    .refine((v) => v === "" || Number(toAsciiDigits(v)) >= 1, "ফরম নম্বর ১ থেকে ৯৯৯৯৯ এর মধ্যে হতে হবে"),
+    .refine((v) => v === "" || /^[0-9০-৯]{1,5}$/.test(v), "টোকেন নম্বর ১ থেকে ৯৯৯৯৯ এর মধ্যে হতে হবে")
+    .refine((v) => v === "" || Number(toAsciiDigits(v)) >= 1, "টোকেন নম্বর ১ থেকে ৯৯৯৯৯ এর মধ্যে হতে হবে"),
   memberName: z.string().trim().min(2, "নাম লিখুন (কমপক্ষে ২ অক্ষর)").max(200, "নাম অনেক বড়"),
   collegeName: optionalText(200),
   thanaName: optionalText(100),
@@ -49,10 +49,12 @@ export const registrationSchema = z.object({
     error: "টি-শার্ট সাইজ নির্বাচন করুন",
   }),
   includeDriver: z.boolean(),
+  // Optional: when a photo is chosen it must still be a small JPG/PNG/WebP.
   photo: z
-    .custom<File>((v) => typeof File !== "undefined" && v instanceof File, "সদস্যের ছবি দিন")
+    .custom<File>((v) => typeof File !== "undefined" && v instanceof File)
     .refine((f) => PHOTO_TYPES.includes(f.type), "শুধু JPG, PNG বা WebP ছবি দেওয়া যাবে")
-    .refine((f) => f.size <= PHOTO_MAX_BYTES, "ছবির আকার ২ মেগাবাইটের কম হতে হবে"),
+    .refine((f) => f.size <= PHOTO_MAX_BYTES, "ছবির আকার ২ মেগাবাইটের কম হতে হবে")
+    .optional(),
   });
 
 export type RegistrationInput = z.input<typeof registrationSchema>;
@@ -78,6 +80,6 @@ export function toFormData(values: RegistrationValues): FormData {
     if (value) fd.append(key, value);
   }
   fd.append("includeDriver", values.includeDriver ? "true" : "false");
-  fd.append("photo", values.photo);
+  if (values.photo) fd.append("photo", values.photo);
   return fd;
 }

@@ -39,13 +39,13 @@ describe("demo-mode API", () => {
     await expect(mockApi.adminRegistrations({ page: 1, pageSize: 5 })).rejects.toMatchObject({ status: 401 });
   });
 
-  it("lets Register enter members with the fee rule, form numbers and duplicate protection", async () => {
+  it("lets Register enter members with the fee rule and unique form numbers; a mobile may repeat", async () => {
     await loginAs("register");
     const auto = await mockApi.register(registrationForm("01999999999", true));
     expect(auto).toMatchObject({ amountPaid: 2000, formNo: 13 });
     const paper = await mockApi.register(registrationForm("01888888888", false, "500"));
     expect(paper).toMatchObject({ amountPaid: 1500, formNo: 500 });
-    await expect(mockApi.register(registrationForm("01999999999", false))).rejects.toMatchObject({ status: 409 });
+    await expect(mockApi.register(registrationForm("01999999999", false))).resolves.toMatchObject({ formNo: 501 });
     await expect(mockApi.register(registrationForm("01777777777", false, "500"))).rejects.toMatchObject({ status: 409 });
   });
 

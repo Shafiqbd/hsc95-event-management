@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
-import { DatabaseService } from '../database/database.service.js';
+import { DataSource } from 'typeorm';
 import type { DuplicateCheckRow } from '../database/db-rows.js';
 import { PhotoStorageService } from '../storage/photo-storage.service.js';
 import { declaredTypeMatches, detectImageType } from '../storage/photo-validation.js';
@@ -21,7 +21,7 @@ export interface RegistrationResult {
 @Injectable()
 export class RegistrationsService {
   constructor(
-    private readonly db: DatabaseService,
+    private readonly dataSource: DataSource,
     private readonly storage: PhotoStorageService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
@@ -48,37 +48,46 @@ export class RegistrationsService {
     photo: UploadedPhoto | undefined,
     enteredBy: number,
   ): Promise<RegistrationResult> {
-    if (!photo) throw new BadRequestException('A member photo is required');
-    const ext = detectImageType(photo.buffer);
-    if (!ext || !declaredTypeMatches(photo.mimetype, ext)) {
-      throw new BadRequestException('The photo must be a JPEG, PNG or WebP image');
+    // The photo is optional; when one is sent it must be a real JPEG/PNG/WebP.
+    let ext: ReturnType<typeof detectImageType> = null;
+    if (photo) {
+      ext = detectImageType(photo.buffer);
+      if (!ext || !declaredTypeMatches(photo.mimetype, ext)) {
+        throw new BadRequestException('The photo must be a JPEG, PNG or WebP image');
+      }
     }
 
     const amount = this.calculateAmount(dto.includeDriver);
-    const fn = this.db.fn;
-    const photoKey = await this.storage.save(photo.buffer, ext);
+    const photoKey = photo && ext ? await this.storage.save(photo.buffer, ext) : null;
 
     try {
-      return await this.db.transaction(async (client) => {
+      return await this.dataSource.transaction(async (manager) => {
         // Takes the registration advisory lock: serialises concurrent entries.
-        const dup = await this.db.callOne<DuplicateCheckRow>(
-          fn.checkRegistrationDuplicate,
+        // Only the form number must be unique; one mobile may register several forms.
+        const [dup]: DuplicateCheckRow[] = await manager.query(
+          `SELECT * FROM sp_check_registration_duplicate($1::varchar, $2::numeric);`,
           [dto.mobileNo, dto.formNo ?? null],
-          client,
         );
         if (!dup) throw new Error('sp_check_registration_duplicate returned no row');
         if (dup.FormNoExists) throw new ConflictException('This form number is already registered');
-        if (dup.MobileNoExists) throw new ConflictException('A registration with this mobile number already exists');
 
         let formNo = dto.formNo ?? null;
         if (formNo === null) {
-          const next = await this.db.callOne<{ FormNo: string }>(fn.getNextFormNo, [], client);
+          const [next]: { FormNo: string }[] = await manager.query(`SELECT sp_get_next_form_no() AS "FormNo";`);
           if (!next) throw new Error('sp_get_next_form_no returned no row');
           formNo = Number(next.FormNo);
         }
 
-        const entry = await this.db.callOne<{ EntryId: number }>(
-          fn.insertEventForm,
+        const insertForm = `
+          SELECT sp_insert_event_form(
+            $1::numeric, $2::text, $3::text, $4::text, $5::text, $6::text,
+            $7::varchar, $8::text, $9::varchar, $10::text, $11::varchar,
+            $12::numeric, $13::varchar, $14::char, $15::numeric, $16::char, $17::numeric
+          ) AS "EntryId";
+        `;
+
+        const [entry]: { EntryId: number }[] = await manager.query(
+          insertForm,
           [
             formNo,
             dto.memberName,
@@ -98,16 +107,21 @@ export class RegistrationsService {
             'N',
             1,
           ],
-          client,
         );
         if (!entry) throw new Error('sp_insert_event_form returned no id');
 
-        await this.db.callOne(fn.insertEventFormPhoto, [entry.EntryId, photoKey, 1], client);
+        if (photoKey) {
+          await manager.query(`SELECT sp_insert_event_form_photo($1::numeric, $2::text, $3::numeric) AS "PhotoId";`, [
+            entry.EntryId,
+            photoKey,
+            1,
+          ]);
+        }
 
         return { entryId: entry.EntryId, formNo, amountPaid: amount };
       });
     } catch (error) {
-      await this.storage.remove(photoKey);
+      if (photoKey) await this.storage.remove(photoKey);
       throw error;
     }
   }

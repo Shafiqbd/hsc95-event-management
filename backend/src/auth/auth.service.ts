@@ -1,8 +1,8 @@
 import { ForbiddenException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { CookieOptions } from 'express';
+import { DataSource } from 'typeorm';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
-import { DatabaseService } from '../database/database.service.js';
 import type { SessionUserRow, UserLoginRow } from '../database/db-rows.js';
 import { ROLES, type Role, type SessionTokenPayload, type SessionUser } from './auth.types.js';
 
@@ -13,7 +13,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly db: DatabaseService,
+    private readonly dataSource: DataSource,
     private readonly jwt: JwtService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
@@ -26,11 +26,17 @@ export class AuthService {
   }
 
   /**
-   * Validate credentials with hsc95.sp_user_login, then enforce UserStatus
-   * (which sp_user_login ignores) and require a recognised user type.
+   * Validate credentials with sp_staff_login (001: sp_user_login's logic with
+   * a working result type), then enforce UserStatus (which it ignores) and
+   * require a recognised user type.
    */
   async login(loginName: string, password: string): Promise<SessionUser> {
-    const row = await this.db.callOne<UserLoginRow>(this.db.fn.userLogin, [loginName, password]);
+    const query = `
+      SELECT *
+      FROM sp_staff_login($1::varchar, $2::varchar);
+    `;
+
+    const [row]: UserLoginRow[] = await this.dataSource.query(query, [loginName, password]);
     if (!row) throw new UnauthorizedException('Invalid login name or password');
 
     const user = await this.loadSessionUser(row.UserId);
@@ -46,7 +52,12 @@ export class AuthService {
    * exists, is not active, or has a user type without application access.
    */
   async loadSessionUser(userId: number): Promise<SessionUser | null> {
-    const row = await this.db.callOne<SessionUserRow>(this.db.fn.getSessionUser, [userId]);
+    const query = `
+      SELECT *
+      FROM sp_get_session_user($1::integer);
+    `;
+
+    const [row]: SessionUserRow[] = await this.dataSource.query(query, [userId]);
     if (!row || Number(row.UserStatus) !== ACTIVE_USER_STATUS) return null;
     const role = this.resolveRole(row.UserTypeName);
     if (!role) return null;

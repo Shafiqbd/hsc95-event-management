@@ -76,10 +76,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
+/* In the base layer so utilities such as focus:outline-none can override it. */
+/* @layer base {
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+} */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -94,14 +97,15 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Entry pass (token). Geometry is in percentages of the 294x366 source  */
-/* artwork; text is sized in container units so preview == print.      */
+/* Entry pass (token): 391 x 399 px, the artwork stretched to fit.      */
+/* Geometry is in percentages; text in container units, so preview ==  */
+/* print at any size.                                                   */
 /* ------------------------------------------------------------------ */
 
 .entry-pass {
   position: relative;
   width: 100%;
-  aspect-ratio: 294 / 366;
+  aspect-ratio: 391 / 399;
   container-type: inline-size;
   overflow: hidden;
   background: #fff;
@@ -120,9 +124,10 @@ body {
 }
 
 @media print {
+  /* The paper is the token: one 391 x 399 px sheet per token, no cutting. */
   @page {
-    size: A4 portrait;
-    margin: 10mm;
+    size: 391px 399px;
+    margin: 0;
   }
 
   html,
@@ -139,13 +144,16 @@ body {
     display: block;
   }
 
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .print-page {
-    display: grid;
-    grid-template-columns: repeat(2, 70mm);
-    grid-auto-rows: 87.14mm;
-    gap: 5mm 10mm;
-    justify-content: center;
-    align-content: start;
+    width: 391px;
+    height: 399px;
+    overflow: hidden;
     break-after: page;
     page-break-after: always;
   }
@@ -156,10 +164,10 @@ body {
   }
 
   .print-page .entry-pass {
-    width: 70mm;
+    width: 391px;
+    height: 399px;
     break-inside: avoid;
     page-break-inside: avoid;
-    outline: 0.2mm dashed #bbb; /* cutting guide */
   }
 }
 
@@ -232,5 +240,13 @@ body {
   button:not(:disabled):hover,
   [role="button"]:hover {
     filter: brightness(1.15);
+  }
+  /* Tailwind 4 resets buttons to the default cursor; every clickable button shows a pointer. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
   }
 }

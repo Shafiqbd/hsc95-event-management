@@ -6,7 +6,7 @@ import { EVENT } from "@/config/event";
 export function Emblem({ size = 44, priority = false, plain = false }: { size?: number; priority?: boolean; plain?: boolean }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center ${plain ? "" : "rounded-xl bg-[#f7f7f7] p-1 ring-1 ring-black/5"}`}
+      className={`inline-flex shrink-0 items-center justify-center ${plain ? "" : "rounded-md bg-[#f7f7f7] p-1 ring-1 ring-black/5"}`}
       style={{ width: size, height: size }}
     >
       <Image

@@ -7,6 +7,7 @@ import type {
   RegistrationPage,
   RegistrationResult,
   SessionUser,
+  SmsBatchResult,
   TokenData,
   UserSummary,
 } from "@/types/api";
@@ -72,6 +73,12 @@ export const liveApi = {
     ),
   adminUsers: () => request<UserSummary[]>("/admin/users"),
   createUser: (user: NewUser) => request<{ userId: number }>("/admin/users", { method: "POST", body: json(user) }),
+  /** One batch of at most SMS_BATCH_SIZE registrations (Admin only). */
+  sendTokenSms: (entryIds: number[]) =>
+    request<SmsBatchResult>("/admin/sms/token-numbers", { method: "POST", body: json({ entryIds }) }),
 };
+
+/** Must not exceed the backend's SMS_BATCH_MAX; small enough for the 30 s proxy timeout. */
+export const SMS_BATCH_SIZE = 25;
 
 export type ApiClient = typeof liveApi;

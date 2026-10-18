@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service.js';
+import { DataSource } from 'typeorm';
 import type { DashboardStatsRow, RegistrationListRow, RegistrationRow, TShirtSummaryRow } from '../database/db-rows.js';
 import { PhotoStorageService } from '../storage/photo-storage.service.js';
 import { externalPhotoUrl, toRegistrationView, type PhotoUrlResolver, type RegistrationView } from './registration.views.js';
@@ -26,13 +26,18 @@ export interface DashboardStats {
 @Injectable()
 export class AdminRegistrationsService {
   constructor(
-    private readonly db: DatabaseService,
+    private readonly dataSource: DataSource,
     private readonly storage: PhotoStorageService,
   ) {}
 
   /** scope: EntryBy filter (a Register user's id) or null for all forms. */
   async list(search: string | undefined, page: number, pageSize: number, scope: number | null): Promise<RegistrationPage> {
-    const rows = await this.db.call<RegistrationListRow>(this.db.fn.getRegistrationList, [
+    const query = `
+      SELECT *
+      FROM sp_get_registration_list($1::text, $2::integer, $3::integer, $4::integer);
+    `;
+
+    const rows: RegistrationListRow[] = await this.dataSource.query(query, [
       search ?? null,
       pageSize,
       (page - 1) * pageSize,
@@ -48,15 +53,20 @@ export class AdminRegistrationsService {
 
   /** Out-of-scope forms are reported as not found, so ids cannot be probed. */
   async findOne(entryId: number, scope: number | null): Promise<RegistrationView> {
-    const row = await this.db.callOne<RegistrationRow>(this.db.fn.getRegistrationById, [entryId, scope]);
+    const query = `
+      SELECT *
+      FROM sp_get_registration_by_id($1::integer, $2::integer);
+    `;
+
+    const [row]: RegistrationRow[] = await this.dataSource.query(query, [entryId, scope]);
     if (!row) throw new NotFoundException('Registration not found');
     return toRegistrationView(row, this.photoUrl);
   }
 
   async stats(scope: number | null): Promise<DashboardStats> {
-    const [row, sizes] = await Promise.all([
-      this.db.callOne<DashboardStatsRow>(this.db.fn.getDashboardStats, [scope]),
-      this.db.call<TShirtSummaryRow>(this.db.fn.getTShirtSummary, [scope]),
+    const [[row], sizes]: [DashboardStatsRow[], TShirtSummaryRow[]] = await Promise.all([
+      this.dataSource.query(`SELECT * FROM sp_get_dashboard_stats($1::integer);`, [scope]),
+      this.dataSource.query(`SELECT * FROM sp_get_tshirt_summary($1::integer);`, [scope]),
     ]);
     if (!row) throw new Error('sp_get_dashboard_stats returned no row');
     return {

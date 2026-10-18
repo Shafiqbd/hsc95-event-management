@@ -34,7 +34,7 @@ export function PhotoPicker({
       />
       <label
         htmlFor={inputId}
-        className={`relative flex aspect-[3/4] w-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border-2 bg-surface-2 text-muted transition-colors hover:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring sm:w-40 ${
+        className={`relative flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border-2 bg-surface-2 text-muted transition-colors hover:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring sm:w-40 ${
           error ? "border-danger" : "border-fg/70"
         }`}
       >
@@ -47,7 +47,7 @@ export function PhotoPicker({
             <span className="mt-1 px-2 text-center text-xs">ছবি নির্বাচন করুন</span>
           </>
         )}
-        <span className="sr-only">সদস্যের ছবি (আবশ্যক)</span>
+        <span className="sr-only">সদস্যের ছবি (ঐচ্ছিক)</span>
       </label>
       <p className="text-center text-xs text-muted">JPG/PNG/WebP, সর্বোচ্চ ২ MB</p>
       {error && (

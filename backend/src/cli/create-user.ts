@@ -1,5 +1,5 @@
 /**
- * Create a staff user with hsc95.sp_insert_user (e.g. the first Admin).
+ * Create a staff user with sp_insert_user (e.g. the first Admin).
  *
  *   npm run create-user -- --name "Full Name" --login admin --email a@b.com --role admin [--contact 017XXXXXXXX]
  *
@@ -12,10 +12,11 @@ import { existsSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import pg from 'pg';
+import { DataSource } from 'typeorm';
 import { loadConfig } from '../config/app-config.js';
-import { buildDbFunctions } from '../database/db-functions.js';
+import { buildDataSourceOptions } from '../database/data-source-options.js';
 import { CreateUserDto } from '../users/dto/create-user.dto.js';
+import { UsersService } from '../users/users.service.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -81,36 +82,13 @@ async function main() {
   }
 
   const config = loadConfig();
-  const fn = buildDbFunctions(config.db.schema);
-  const client = new pg.Client({
-    host: config.db.host,
-    port: config.db.port,
-    database: config.db.database,
-    user: config.db.user,
-    password: config.db.password,
-    ssl: config.db.ssl ? { rejectUnauthorized: true } : undefined,
-  });
-  await client.connect();
+  const dataSource = await new DataSource({ ...buildDataSourceOptions(config), poolSize: 1 }).initialize();
   try {
-    await client.query('BEGIN');
-    const exists = await client.query<{ Exists: boolean }>(fn.checkLoginExists.sql, [dto.loginName]);
-    if (exists.rows[0]?.Exists) throw new Error(`Login name "${dto.loginName}" is already taken`);
-    const created = await client.query<{ UserId: number }>(fn.insertUser.sql, [
-      dto.fullName,
-      dto.loginName,
-      dto.password,
-      dto.email,
-      dto.contactNumber ?? null,
-      config.roles[dto.role].typeId,
-      1,
-    ]);
-    await client.query('COMMIT');
-    console.log(`Created ${dto.role} user "${dto.loginName}" with UserId ${created.rows[0].UserId}.`);
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
+    // Same transaction + login-name check as the Users page.
+    const { userId } = await new UsersService(dataSource, config).create(dto);
+    console.log(`Created ${dto.role} user "${dto.loginName}" with UserId ${userId}.`);
   } finally {
-    await client.end();
+    await dataSource.destroy();
   }
 }
 

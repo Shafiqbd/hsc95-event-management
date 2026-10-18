@@ -32,7 +32,7 @@ export function RegistrationDetailPanel({ entryId, onClose }: { entryId: number;
           <h2 id="registration-detail-title" className="text-lg font-semibold">
             Registration details
           </h2>
-          <button type="button" onClick={onClose} aria-label="Close details" className="rounded-lg p-2 hover:bg-surface-2" autoFocus>
+          <button type="button" onClick={onClose} aria-label="Close details" className="rounded-md p-2 hover:bg-surface-2" autoFocus>
             <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
@@ -53,7 +53,7 @@ export function RegistrationDetailPanel({ entryId, onClose }: { entryId: number;
                 <div className="space-y-3">
                   {r.tokenReady ? (
                     <>
-                      <div className="overflow-hidden rounded-lg ring-1 ring-border">
+                      <div className="overflow-hidden rounded-md ring-1 ring-border">
                         <EntryPass token={tokenFromRegistration(r)} />
                       </div>
                       <Button

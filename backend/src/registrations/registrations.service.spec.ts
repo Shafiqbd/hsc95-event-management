@@ -1,13 +1,13 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { JPEG, FakeDatabase, testConfig } from '../../test/helpers.js';
-import type { DatabaseService } from '../database/database.service.js';
+import type { DataSource } from 'typeorm';
+import { JPEG, FakeDataSource, testConfig } from '../../test/helpers.js';
 import type { PhotoStorageService } from '../storage/photo-storage.service.js';
 import { CreateRegistrationDto } from './dto/create-registration.dto.js';
 import { RegistrationsService } from './registrations.service.js';
 
 function setup() {
-  const db = new FakeDatabase()
+  const db = new FakeDataSource()
     .on('sp_check_registration_duplicate', () => [{ MobileNoExists: false, FormNoExists: false }])
     .on('sp_get_next_form_no', () => [{ FormNo: '12' }])
     .on('sp_insert_event_form', () => [{ EntryId: 90 }])
@@ -17,7 +17,7 @@ function setup() {
     remove: vi.fn(async () => undefined),
   };
   const service = new RegistrationsService(
-    db as unknown as DatabaseService,
+    db as unknown as DataSource,
     storage as unknown as PhotoStorageService,
     testConfig(),
   );
@@ -43,10 +43,10 @@ describe('RegistrationsService.register', () => {
 
     expect(result).toEqual({ entryId: 90, formNo: 12, amountPaid: 2000 });
     expect(db.calls.map((c) => c.name)).toEqual([
-      'hsc95.sp_check_registration_duplicate',
-      'hsc95.sp_get_next_form_no',
-      'hsc95.sp_insert_event_form',
-      'hsc95.sp_insert_event_form_photo',
+      'sp_check_registration_duplicate',
+      'sp_get_next_form_no',
+      'sp_insert_event_form',
+      'sp_insert_event_form_photo',
     ]);
     expect(db.called('sp_insert_user')).toBe(false); // members get no login account
     const form = db.calls[2].params;
@@ -69,15 +69,19 @@ describe('RegistrationsService.register', () => {
     expect(db.called('sp_get_next_form_no')).toBe(false);
   });
 
-  it.each([
-    [{ MobileNoExists: true, FormNoExists: false }, /mobile number/],
-    [{ MobileNoExists: false, FormNoExists: true }, /form number/],
-  ])('rejects duplicates, rolls back and deletes the stored photo (%o)', async (dup, message) => {
+  it('allows several forms with the same mobile number', async () => {
+    const { db, service } = setup();
+    db.on('sp_check_registration_duplicate', () => [{ MobileNoExists: true, FormNoExists: false }]);
+    await expect(service.register(dto(), photo, OPERATOR)).resolves.toMatchObject({ entryId: 90 });
+    expect(db.called('sp_insert_event_form')).toBe(true);
+  });
+
+  it('rejects a duplicate form number, rolls back and deletes the stored photo', async () => {
     const { db, storage, service } = setup();
-    db.on('sp_check_registration_duplicate', () => [dup]);
+    db.on('sp_check_registration_duplicate', () => [{ MobileNoExists: false, FormNoExists: true }]);
     const error = await service.register(dto({ formNo: 5 }), photo, OPERATOR).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ConflictException);
-    expect((error as Error).message).toMatch(message);
+    expect((error as Error).message).toMatch(/form number/);
     expect(db.called('sp_insert_event_form')).toBe(false);
     expect(db.rolledBack).toBe(1);
     expect(storage.remove).toHaveBeenCalledOnce();
@@ -93,9 +97,16 @@ describe('RegistrationsService.register', () => {
     expect(storage.remove).toHaveBeenCalledOnce();
   });
 
-  it('requires a real image: missing, fake or mislabelled files are rejected before storage', async () => {
+  it('saves a registration without a photo and writes no photo row', async () => {
+    const { db, storage, service } = setup();
+    await expect(service.register(dto(), undefined, OPERATOR)).resolves.toEqual({ entryId: 90, formNo: 12, amountPaid: 2000 });
+    expect(storage.save).not.toHaveBeenCalled();
+    expect(db.called('sp_insert_event_form_photo')).toBe(false);
+    expect(db.committed).toBe(1);
+  });
+
+  it('when a photo is sent it must be a real image: fake or mislabelled files are rejected before storage', async () => {
     const { storage, service } = setup();
-    await expect(service.register(dto(), undefined, OPERATOR)).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.register(dto(), { ...photo, buffer: Buffer.from('<?php') }, OPERATOR)).rejects.toBeInstanceOf(
       BadRequestException,
     );

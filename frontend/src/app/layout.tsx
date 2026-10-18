@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Hind_Siliguri } from "next/font/google";
+import localFont from "next/font/local";
 import { themeInitScript } from "@/components/theme/theme-script";
 import { EVENT } from "@/config/event";
 import "./globals.css";
 
-// Self-hosted by next/font, so the Bengali font is also available when printing.
-const bengali = Hind_Siliguri({
+// Kalpurush, self-hosted by next/font, so the Bengali font is also available when printing.
+// It ships a single Regular weight; bolder text is synthesised by the browser.
+const bengali = localFont({
+  src: "./fonts/kalpurush.ttf",
   variable: "--font-bengali",
-  subsets: ["bengali", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
   display: "swap",
 });
 

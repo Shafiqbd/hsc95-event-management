@@ -44,6 +44,16 @@ export interface TokenData {
   formNo: number | null;
   mobileNo: string | null;
   photoUrl: string | null;
+  collegeName: string | null;
+  tShirtSize: string | null;
+  includeDriver: boolean;
+}
+
+/** Result of one SMS batch (POST /admin/sms/token-numbers). */
+export interface SmsBatchResult {
+  requested: number;
+  sent: number;
+  failed: { entryId: number; formNo: number | null; mobileNo: string | null; reason: string }[];
 }
 
 export interface RegistrationPage {

@@ -108,6 +108,9 @@ const toToken = (r: Registration): TokenData => ({
   formNo: r.formNo,
   mobileNo: r.mobileNo,
   photoUrl: r.photoUrl,
+  collegeName: r.collegeName,
+  tShirtSize: r.tShirtSize,
+  includeDriver: r.includeDriver,
 });
 
 /** Small delay so loading states are visible, as with a real network. */
@@ -168,11 +171,8 @@ export const mockApi: ApiClient = {
     if (requestedFormNo && db.registrations.some((r) => r.formNo === Number(requestedFormNo))) {
       throw new ApiError(409, "This form number is already registered");
     }
-    if (db.registrations.some((r) => r.mobileNo === mobileNo && r.isActive)) {
-      throw new ApiError(409, "A registration with this mobile number already exists");
-    }
-    const photo = form.get("photo");
-    if (!(photo instanceof File)) throw new ApiError(400, "A member photo is required");
+    const photoEntry = form.get("photo");
+    const photo = photoEntry instanceof File ? photoEntry : null;
 
     const includeDriver = form.get("includeDriver") === "true";
     const entryId = Math.max(0, ...db.registrations.map((r) => r.entryId)) + 1;
@@ -202,8 +202,8 @@ export const mockApi: ApiClient = {
       passCode: null,
       isLocked: false,
       isActive: true,
-      hasPhoto: true,
-      photoUrl: await photoToDataUrl(photo),
+      hasPhoto: photo !== null,
+      photoUrl: photo ? await photoToDataUrl(photo) : null,
       tokenReady: true,
     });
     saveDb(db);
@@ -254,9 +254,19 @@ export const mockApi: ApiClient = {
   },
 
   adminPrintData: async (entryIds) => {
-    const regs = visibleRegistrations(requireRole(...STAFF)).filter((r) => r.hasPhoto);
+    const regs = visibleRegistrations(requireRole(...STAFF)).filter((r) => r.tokenReady);
     const selected = entryIds && entryIds.length > 0 ? regs.filter((r) => entryIds.includes(r.entryId)) : regs;
     return delay(selected.map((r) => toToken(r)), 400);
+  },
+
+  sendTokenSms: async (entryIds) => {
+    requireRole("admin");
+    const ready = new Set(loadDb().registrations.filter((r) => r.tokenReady).map((r) => r.entryId));
+    const failed = entryIds
+      .filter((id) => !ready.has(id))
+      .map((entryId) => ({ entryId, formNo: null, mobileNo: null, reason: "Not an active registration with a token number" }));
+    // Demo mode never contacts the SMS gateway.
+    return delay({ requested: entryIds.length, sent: entryIds.length - failed.length, failed }, 300 + entryIds.length * 40);
   },
 
   adminUsers: async () => {

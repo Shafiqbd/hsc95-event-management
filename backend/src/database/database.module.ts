@@ -1,30 +1,15 @@
-import { Global, Module } from '@nestjs/common';
-import pg from 'pg';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
-import { DatabaseService, PG_POOL } from './database.service.js';
+import { buildDataSourceOptions } from './data-source-options.js';
 
-@Global()
+/** Provides the TypeORM DataSource that services inject. */
 @Module({
-  providers: [
-    {
-      provide: PG_POOL,
+  imports: [
+    TypeOrmModule.forRootAsync({
       inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) =>
-        new pg.Pool({
-          host: config.db.host,
-          port: config.db.port,
-          database: config.db.database,
-          user: config.db.user,
-          password: config.db.password,
-          ssl: config.db.ssl ? { rejectUnauthorized: true } : undefined,
-          max: config.db.poolMax,
-          idleTimeoutMillis: 30_000,
-          connectionTimeoutMillis: 5_000,
-          application_name: 'hsc95-event-management',
-        }),
-    },
-    DatabaseService,
+      useFactory: (config: AppConfig) => buildDataSourceOptions(config),
+    }),
   ],
-  exports: [DatabaseService],
 })
 export class DatabaseModule {}

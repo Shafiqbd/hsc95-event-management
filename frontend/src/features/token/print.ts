@@ -1,5 +1,8 @@
-/** Tokens per A4 page: 2 columns x 3 rows of 70 x 87.14 mm (see globals.css). */
-export const TOKENS_PER_PAGE = 6;
+/**
+ * One token per sheet: the paper itself is the token size (TOKEN_W_PX x
+ * TOKEN_H_PX, see globals.css @page), so nothing has to be cut.
+ */
+export const TOKENS_PER_PAGE = 1;
 
 export function chunk<T>(items: readonly T[], size: number): T[][] {
   if (size < 1) throw new Error("size must be >= 1");

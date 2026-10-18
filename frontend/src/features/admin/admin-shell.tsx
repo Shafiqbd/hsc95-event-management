@@ -90,7 +90,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             href={href}
             onClick={() => setMenuOpen(false)}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:brightness-110 ${
+            className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:brightness-110 ${
               active
                 ? "bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_22%,transparent),color-mix(in_oklab,var(--violet)_18%,transparent))] text-primary"
                 : "text-muted hover:bg-surface-2 hover:text-fg"
@@ -101,7 +101,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         );
       })}
       {isMockMode && (
-        <div className="mt-4 rounded-xl border border-dashed border-gold/50 bg-gold/5 p-3 text-xs">
+        <div className="mt-4 rounded-md border border-dashed border-gold/50 bg-gold/5 p-3 text-xs">
           <p className="flex items-center gap-1.5 font-semibold text-gold">
             <FlaskConical className="h-4 w-4" aria-hidden /> Demo mode
           </p>
@@ -138,7 +138,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <aside className="relative h-full w-72 border-r border-border bg-bg-soft">
             <div className="flex h-16 items-center justify-between border-b border-border px-4">
               <BrandLink href="/backend/dashboard" />
-              <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} className="rounded-lg p-2 hover:bg-surface-2">
+              <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} className="rounded-md p-2 hover:bg-surface-2">
                 <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
@@ -151,7 +151,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface lg:hidden"
             aria-label="Open menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(true)}

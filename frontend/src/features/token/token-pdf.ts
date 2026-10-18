@@ -1,20 +1,17 @@
-import { formatFormNo } from "@/lib/format";
 import type { TokenData } from "@/types/api";
-import { TOKEN_BACKGROUND_SRC, TOKEN_GEOMETRY } from "./entry-pass";
-import { TOKENS_PER_PAGE } from "./print";
+import { TOKEN_BACKGROUND_SRC, TOKEN_GEOMETRY, TOKEN_H_PX, TOKEN_W_PX, tokenDetails } from "./entry-pass";
 
-/** Token size on paper, identical to the print stylesheet. */
-const TOKEN_W_MM = 70;
-const TOKEN_H_MM = (TOKEN_W_MM * 366) / 294;
-const GAP_X_MM = 10;
-const GAP_Y_MM = 5;
-const PAGE_W_MM = 210;
-const MARGIN_TOP_MM = 10;
-const LEFT_MM = (PAGE_W_MM - (2 * TOKEN_W_MM + GAP_X_MM)) / 2;
+/**
+ * PDF layout: every page is one token, and the page IS the paper size
+ * (391 x 399 CSS px = 293.25 x 299.25 pt), so nothing has to be cut.
+ * The artwork is stretched to that shape; the photo is cover-fitted.
+ */
+const PAGE_W_PT = TOKEN_W_PX * 0.75;
+const PAGE_H_PT = TOKEN_H_PX * 0.75;
 
-/** ~300 dpi at 70 mm wide. */
-const CANVAS_W = 827;
-const CANVAS_H = Math.round((CANVAS_W * 366) / 294);
+/** ~300 dpi (96 dpi CSS px x 3.125). */
+const CANVAS_W = Math.round(TOKEN_W_PX * 3.125);
+const CANVAS_H = Math.round(TOKEN_H_PX * 3.125);
 
 const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
 
@@ -35,26 +32,32 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 const pct = (value: string) => Number.parseFloat(value) / 100;
 
-/** Break text into at most `maxLines` lines that fit `maxWidth`. */
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth || !line) line = candidate;
-    else {
-      lines.push(line);
-      line = word;
-    }
+/**
+ * Set the largest font (down to 75% of `size`) at which `text` fits
+ * `maxWidth`; if it still does not fit, shorten it with an ellipsis.
+ */
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  weight: number,
+  size: number,
+  fontFamily: string,
+): string {
+  for (let s = size; s >= size * 0.75; s -= size * 0.05) {
+    ctx.font = `${weight} ${s}px ${fontFamily}`;
+    if (ctx.measureText(text).width <= maxWidth) return text;
   }
-  if (line) lines.push(line);
-  if (lines.length > maxLines) {
-    const kept = lines.slice(0, maxLines);
-    kept[maxLines - 1] = `${kept[maxLines - 1]}…`;
-    return kept;
-  }
-  return lines;
+  let cut = text;
+  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > maxWidth) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
+}
+
+interface InfoLine {
+  text: string;
+  weight: number;
+  size: number;
+  color: string;
 }
 
 /** Draw one entry pass onto a canvas, mirroring the EntryPass component. */
@@ -89,32 +92,53 @@ async function renderToken(token: TokenData, fontFamily: string): Promise<HTMLCa
     ctx.drawImage(photo, sx, 0, sw, sh, px, py, pw, ph);
   }
 
-  // Name + form number, centred in the information box.
+  // Member details, top to bottom: token no., name, mobile, T-shirt, driver.
   const info = TOKEN_GEOMETRY.info;
   const ix = pct(info.left) * CANVAS_W;
   const iy = pct(info.top) * CANVAS_H;
   const iw = pct(info.width) * CANVAS_W;
   const ih = pct(info.height) * CANVAS_H;
-  const nameSize = (token.memberName.length > 24 ? 0.054 : 0.066) * CANVAS_W;
-  const formSize = 0.048 * CANVAS_W;
+  const maxW = iw * 0.94;
+  const cx = ix + iw / 2;
 
+  const d = tokenDetails(token);
+  const NAME_SCALE = 1.3;
+  const LINE_H = 1.25;
+  const lineCount = d.driver ? 5 : 4;
+  // Base text size so every line (name a bit larger) fills ~92% of the box height.
+  const s = (ih * 0.92) / ((lineCount - 1 + NAME_SCALE) * LINE_H);
+  const lines: InfoLine[] = [
+    { text: d.tokenNo, weight: 600, size: s, color: "#5b3fb0" },
+    { text: d.name, weight: 700, size: s * NAME_SCALE, color: "#1d1b3a" },
+    { text: d.mobile, weight: 500, size: s, color: "#1d1b3a" },
+    { text: d.tShirt, weight: 500, size: s, color: "#1d1b3a" },
+  ];
+
+  let y = iy + (ih - lineCount * s * LINE_H - s * (NAME_SCALE - 1) * LINE_H) / 2;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `700 ${nameSize}px ${fontFamily}`;
-  const lines = wrap(ctx, token.memberName, iw - 0.04 * CANVAS_W, 2);
-  const lineH = nameSize * 1.15;
-  const gap = 0.012 * CANVAS_W;
-  const blockH = lines.length * lineH + gap + formSize * 1.15;
-  let y = iy + (ih - blockH) / 2 + lineH / 2;
-
-  ctx.fillStyle = "#1d1b3a";
   for (const line of lines) {
-    ctx.fillText(line, ix + iw / 2, y);
-    y += lineH;
+    const h = line.size * LINE_H;
+    ctx.fillStyle = line.color;
+    ctx.fillText(fitText(ctx, line.text, maxW, line.weight, line.size, fontFamily), cx, y + h / 2);
+    y += h;
   }
-  ctx.font = `600 ${formSize}px ${fontFamily}`;
-  ctx.fillStyle = "#5b3fb0";
-  ctx.fillText(`ফরম নং : ${formatFormNo(token.formNo)}`, ix + iw / 2, y - lineH / 2 + gap + (formSize * 1.15) / 2);
+
+  if (d.driver) {
+    // Green "With Driver" pill on the bottom line.
+    const h = s * LINE_H;
+    ctx.font = `700 ${s * 0.95}px ${fontFamily}`;
+    const padX = s * 0.6;
+    const bw = ctx.measureText(d.driver).width + padX * 2;
+    const bh = s * 1.15;
+    const mid = y + h / 2;
+    ctx.fillStyle = "#15803d";
+    ctx.beginPath();
+    ctx.roundRect(cx - bw / 2, mid - bh / 2, bw, bh, s * 0.25);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(d.driver, cx, mid);
+  }
 
   return canvas;
 }
@@ -125,8 +149,9 @@ export interface PdfProgress {
 }
 
 /**
- * Build an A4 PDF (6 tokens per page, same layout as printing) and trigger
- * a file download. Runs entirely in the browser.
+ * Build a PDF with one 391 x 399 px token per page (token no., name,
+ * mobile, T-shirt size and driver) and trigger a file download.
+ * Runs entirely in the browser.
  */
 export async function downloadTokensPdf(
   tokens: TokenData[],
@@ -142,23 +167,13 @@ export async function downloadTokensPdf(
     document.fonts.load(`600 20px ${fontFamily}`, "অআ"),
   ]).catch(() => undefined);
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: [PAGE_W_PT, PAGE_H_PT], compress: true });
   doc.setProperties({ title: fileName, creator: "HSC 95 Society Event Management" });
 
   for (let i = 0; i < tokens.length; i += 1) {
-    const slot = i % TOKENS_PER_PAGE;
-    if (i > 0 && slot === 0) doc.addPage();
-    const x = LEFT_MM + (slot % 2) * (TOKEN_W_MM + GAP_X_MM);
-    const y = MARGIN_TOP_MM + Math.floor(slot / 2) * (TOKEN_H_MM + GAP_Y_MM);
-
+    if (i > 0) doc.addPage([PAGE_W_PT, PAGE_H_PT], "portrait");
     const canvas = await renderToken(tokens[i], fontFamily);
-    doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", x, y, TOKEN_W_MM, TOKEN_H_MM, undefined, "FAST");
-
-    // Dashed cutting guide.
-    doc.setDrawColor(180);
-    doc.setLineWidth(0.2);
-    doc.setLineDashPattern([1.5, 1.5], 0);
-    doc.rect(x, y, TOKEN_W_MM, TOKEN_H_MM);
+    doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, PAGE_W_PT, PAGE_H_PT, undefined, "FAST");
 
     onProgress?.({ done: i + 1, total: tokens.length });
     // Yield so the progress label can update on large batches.

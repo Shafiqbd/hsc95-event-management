@@ -22,17 +22,14 @@ export class TokensController {
   constructor(private readonly tokens: TokensService) {}
 
   /**
-   * Complete print dataset, never just one page of the table.
-   * Without ids: all eligible tokens (sp_prepare_entrypass), or for a
-   * Register user all eligible tokens they entered.
-   * With ?ids=1,2,3: only those registrations (sp_get_entrypass_by_ids),
-   * again limited to a Register user's own entries.
+   * Complete print dataset, never just one page of the table, via
+   * sp_get_entrypass_by_ids (it also returns college, T-shirt size and
+   * driver, which sp_prepare_entrypass does not).
+   * Without ids: all eligible tokens; with ?ids=1,2,3: only those
+   * registrations. Both are limited to a Register user's own entries.
    */
   @Get('print-data')
   async printData(@CurrentUser() user: SessionUser, @Query('ids') ids?: string) {
-    const selected = parseEntryIds(ids);
-    const scope = entryScope(user);
-    if (!selected && scope === null) return { data: await this.tokens.all() };
-    return { data: await this.tokens.byIds(selected, scope) };
+    return { data: await this.tokens.byIds(parseEntryIds(ids), entryScope(user)) };
   }
 }

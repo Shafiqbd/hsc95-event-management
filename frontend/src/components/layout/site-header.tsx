@@ -28,7 +28,7 @@ export function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="group relative rounded-lg px-3 py-2 text-[15px] text-muted transition-colors hover:text-fg"
+              className="group relative rounded-md px-3 py-2 text-[15px] text-muted transition-colors hover:text-fg"
             >
               {item.label}
               <span
@@ -46,7 +46,7 @@ export function SiteHeader() {
           </Link>
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface md:hidden"
             aria-label={open ? "মেনু বন্ধ করুন" : "মেনু খুলুন"}
             aria-expanded={open}
             aria-controls="mobile-nav"
@@ -62,7 +62,7 @@ export function SiteHeader() {
           <ul className="flex flex-col py-2">
             {NAV.map((item) => (
               <li key={item.href}>
-                <Link href={item.href} onClick={close} className="block rounded-lg px-3 py-3 text-fg hover:bg-surface-2">
+                <Link href={item.href} onClick={close} className="block rounded-md px-3 py-3 text-fg hover:bg-surface-2">
                   {item.label}
                 </Link>
               </li>

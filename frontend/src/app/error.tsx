@@ -15,7 +15,7 @@ export default function RouteError({ retry }: { error: Error & { digest?: string
         <Button onClick={retry} icon={<RefreshCw className="h-4 w-4" aria-hidden />}>
           আবার চেষ্টা করুন
         </Button>
-        <Link href="/" className="inline-flex h-11 items-center rounded-xl border border-border px-5">
+        <Link href="/" className="inline-flex h-11 items-center rounded-md border border-border px-5">
           হোম
         </Link>
       </div>

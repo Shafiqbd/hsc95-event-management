@@ -11,6 +11,9 @@ const token = (i: number, photoUrl: string | null = `/api/admin/photos/${i}.jpg`
   formNo: i,
   mobileNo: null,
   photoUrl,
+  collegeName: null,
+  tShirtSize: "L",
+  includeDriver: false,
 });
 
 describe("EntryPass", () => {
@@ -20,7 +23,25 @@ describe("EntryPass", () => {
     expect(imgs[0]).toHaveAttribute("src", TOKEN_BACKGROUND_SRC);
     expect(screen.getByAltText("করিম আহমেদ এর ছবি")).toHaveAttribute("src", "/api/admin/photos/12.jpg");
     expect(screen.getByText("করিম আহমেদ")).toBeInTheDocument();
-    expect(screen.getByText("ফরম নং : ০০১২")).toBeInTheDocument();
+    expect(screen.getByText("টোকেন নং : ০০১২")).toBeInTheDocument();
+  });
+
+  it("lists token no., name, mobile, T-shirt size and the driver badge in order (no college)", () => {
+    const { container } = render(
+      <EntryPass
+        token={{ ...token(7), memberName: "রহিম", collegeName: "ঢাকা কলেজ", mobileNo: "01711111111", tShirtSize: "XL", includeDriver: true }}
+      />,
+    );
+    const texts = [...container.querySelectorAll("p")].map((p) => p.textContent);
+    expect(texts).toEqual([
+      "টোকেন নং : ০০০৭",
+      "রহিম",
+      "মোবাইল : 01711111111",
+      "টি-শার্ট সাইজ : XL",
+      "With Driver",
+    ]);
+    render(<EntryPass token={token(8)} />);
+    expect(screen.getAllByText("With Driver")).toHaveLength(1);
   });
 
   it("shows a placeholder when there is no photo", () => {
@@ -30,16 +51,17 @@ describe("EntryPass", () => {
 });
 
 describe("bulk print layout", () => {
-  it("chunks tokens into A4 pages of six", () => {
-    expect(chunk([1, 2, 3, 4, 5, 6, 7], TOKENS_PER_PAGE)).toEqual([[1, 2, 3, 4, 5, 6], [7]]);
+  it("chunks items into pages", () => {
+    expect(TOKENS_PER_PAGE).toBe(1);
+    expect(chunk([1, 2, 3, 4, 5, 6, 7], 6)).toEqual([[1, 2, 3, 4, 5, 6], [7]]);
     expect(chunk([], 6)).toEqual([]);
   });
 
-  it("renders every token, split into print pages", () => {
+  it("prints every token on its own page (one sheet per token)", () => {
     const tokens = Array.from({ length: 13 }, (_, i) => token(i + 1));
     const { container } = render(<PrintPages tokens={tokens} />);
-    expect(container.querySelectorAll(".print-page")).toHaveLength(3);
-    expect(container.querySelectorAll(".entry-pass")).toHaveLength(13);
+    expect(container.querySelectorAll(".print-page")).toHaveLength(13);
+    expect(container.querySelectorAll(".print-page > .entry-pass")).toHaveLength(13);
   });
 
   it("waits for images and reports failures", async () => {

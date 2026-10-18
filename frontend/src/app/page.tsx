@@ -19,7 +19,7 @@ const FACILITIES: { icon: LucideIcon; title: string; description: string }[] = [
   { icon: ClipboardList, title: "রেজিস্ট্রেশন ডেস্ক", description: "কাগজের ফরম জমা দিলে রেজিস্ট্রেশন ডেস্ক থেকে আপনার তথ্য সংরক্ষণ করা হবে।" },
   { icon: Camera, title: "সদস্যের ছবি", description: "প্রবেশ পাসে ব্যবহারের জন্য ফরমের সঙ্গে একটি ছবি দিন।" },
   { icon: Shirt, title: "পোলো টি-শার্ট সাইজ", description: "M, L, XL ও XXL — আপনার মাপের টি-শার্ট সাইজ ফরমে উল্লেখ করুন।" },
-  { icon: Ticket, title: "প্রবেশ টোকেন / পাস", description: "ছবি, নাম ও ফরম নম্বরসহ ব্যক্তিগত প্রবেশ পাস।" },
+  { icon: Ticket, title: "প্রবেশ টোকেন / পাস", description: "ছবি, নাম ও টোকেন নম্বরসহ ব্যক্তিগত প্রবেশ পাস।" },
   { icon: Car, title: "ড্রাইভার সুবিধা", description: "সঙ্গে ড্রাইভার থাকলে ফরমে উল্লেখ করুন (অতিরিক্ত ফি প্রযোজ্য)।" },
   { icon: Printer, title: "টোকেন প্রিন্ট", description: "আয়োজকরা সকল সদস্যের প্রবেশ পাস একসাথে প্রিন্ট করে বিতরণ করবেন।" },
 ];
@@ -49,7 +49,7 @@ export default function HomePage() {
           <p className="mt-2 text-muted">অনুষ্ঠানের মূল তথ্য এক নজরে।</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {infoCards.map(({ icon: Icon, label, value, accent }) => (
-              <div key={label} className="reveal rounded-2xl border border-border bg-surface p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_18px_40px_-18px_color-mix(in_oklab,var(--primary)_70%,transparent)]">
+              <div key={label} className="reveal rounded-md border border-border bg-surface p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_18px_40px_-18px_color-mix(in_oklab,var(--primary)_70%,transparent)]">
                 <Icon className={`h-7 w-7 ${accent}`} aria-hidden />
                 <p className="mt-4 text-sm text-muted">{label}</p>
                 <p className="mt-1 text-xl font-bold">{value}</p>
@@ -68,9 +68,9 @@ export default function HomePage() {
             {FACILITIES.map(({ icon: Icon, title, description }) => (
               <div
                 key={title}
-                className="reveal group rounded-2xl border border-border bg-surface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-violet/50 hover:shadow-[0_18px_40px_-18px_color-mix(in_oklab,var(--violet)_70%,transparent)]"
+                className="reveal group rounded-md border border-border bg-surface p-6 transition-all duration-300 hover:-translate-y-1 hover:border-violet/50 hover:shadow-[0_18px_40px_-18px_color-mix(in_oklab,var(--violet)_70%,transparent)]"
               >
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-violet/20 text-primary transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-linear-to-br from-primary/20 to-violet/20 text-primary transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
                 <h3 className="mt-4 text-lg font-semibold">{title}</h3>
@@ -78,7 +78,7 @@ export default function HomePage() {
               </div>
             ))}
             {EVENT.confirmedFacilities.map((item) => (
-              <div key={item.title} className="rounded-2xl border border-gold/40 bg-surface p-6">
+              <div key={item.title} className="rounded-md border border-gold/40 bg-surface p-6">
                 <h3 className="text-lg font-semibold">{item.title}</h3>
                 <p className="mt-1 text-sm text-muted">{item.description}</p>
               </div>
@@ -94,7 +94,7 @@ export default function HomePage() {
 
       {/* Registration CTA */}
       <section id="registration" className="scroll-mt-20 px-4 pb-20">
-        <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-border bg-linear-to-br from-primary/20 via-surface to-violet/20 p-8 shadow-soft md:p-12">
+        <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-md border border-border bg-linear-to-br from-primary/20 via-surface to-violet/20 p-8 shadow-soft md:p-12">
           <div aria-hidden className="animate-glow-pulse pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--gold)_30%,transparent),transparent_70%)] blur-2xl" />
           <div className="grid gap-8 md:grid-cols-2 md:items-center">
             <div>
@@ -107,7 +107,7 @@ export default function HomePage() {
             </div>
             <ol className="space-y-3">
               {STEPS.map((step, i) => (
-                <li key={step} className="relative flex items-start gap-3 rounded-xl bg-surface/70 p-4 ring-1 ring-border transition-all duration-300 hover:translate-x-1 hover:ring-primary/50">
+                <li key={step} className="relative flex items-start gap-3 rounded-md bg-surface/70 p-4 ring-1 ring-border transition-all duration-300 hover:translate-x-1 hover:ring-primary/50">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-fg">
                     {["১", "২", "৩"][i]}
                   </span>

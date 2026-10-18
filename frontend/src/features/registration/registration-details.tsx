@@ -22,7 +22,7 @@ export function StatusBadges({ registration }: { registration: Registration }) {
 /** Field list shared by the member dashboard and the admin detail panel. */
 export function RegistrationDetails({ registration: r }: { registration: Registration }) {
   const rows: [string, string][] = [
-    ["ফরম নং", formatFormNo(r.formNo)],
+    ["টোকেন নং", formatFormNo(r.formNo)],
     ["নাম", r.memberName],
     ["কলেজ", r.collegeName ?? "—"],
     ["থানা", r.thanaName ?? "—"],

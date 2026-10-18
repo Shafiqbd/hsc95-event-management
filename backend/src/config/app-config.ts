@@ -48,6 +48,15 @@ export interface AppConfig {
     registrationFee: number;
     driverFee: number;
   };
+  sms: {
+    /** bulksmsbd.net endpoint. */
+    apiUrl: string;
+    /** Empty = SMS sending is disabled (the API answers 503). */
+    apiKey: string;
+    senderId: string;
+    /** The token number is appended: "<message>: 0043". */
+    message: string;
+  };
 }
 
 class ConfigError extends Error {}
@@ -149,6 +158,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     event: {
       registrationFee: int(env, 'EVENT_REGISTRATION_FEE', 1500, 0),
       driverFee: int(env, 'EVENT_DRIVER_FEE', 500, 0),
+    },
+    sms: {
+      apiUrl: env.SMS_API_URL?.trim() || 'http://bulksmsbd.net/api/smsapi',
+      apiKey: env.SMS_API_KEY?.trim() ?? '',
+      senderId: env.SMS_API_SENDER_KEY?.trim() ?? '',
+      message: env.SMS_API_MESSAGE?.trim() || 'Your registration is completed and your token number is',
     },
   };
 }

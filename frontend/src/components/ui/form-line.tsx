@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 
+
 /** Input styled like the dotted lines of the paper registration form. */
 export const lineInputClass =
-  "w-full border-0 border-b-2 border-dotted border-border bg-transparent px-1 py-2 text-[15px] text-fg placeholder:text-muted/60 transition-colors focus:border-solid focus:border-primary focus:outline-none aria-[invalid=true]:border-danger";
+  "w-full border-0 border-b-2 border-dotted border-border bg-transparent px-1 py-1 text-[15px] leading-6 text-fg placeholder:text-muted/60 transition-colors outline-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 aria-[invalid=true]:border-danger";
 
 /** Boxed input for login screens and admin tools. */
 export const boxInputClass =
-  "h-11 w-full rounded-xl border border-border bg-surface-2 px-3 text-[15px] text-fg placeholder:text-muted/70 transition-colors focus:border-primary focus:outline-none aria-[invalid=true]:border-danger";
+  "h-11 w-full rounded-md border border-border bg-surface-2 px-3 text-[15px] text-fg placeholder:text-muted/70 transition-colors outline-none shadow-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 aria-[invalid=true]:border-danger";
+
 
 export function FormLine({
   id,

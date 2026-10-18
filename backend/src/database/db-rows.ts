@@ -1,10 +1,10 @@
 /**
  * Row shapes returned by the PostgreSQL functions, exactly as node-postgres
  * delivers them. numeric/bigint arrive as strings, timestamps as strings
- * (see the type parsers in database.service.ts).
+ * (see the type parser in data-source-options.ts).
  */
 
-/** hsc95.sp_user_login (db.txt) */
+/** hsc95.sp_staff_login (001; same columns as db.txt's sp_user_login) */
 export interface UserLoginRow {
   UserId: number;
   FullName: string;
@@ -33,6 +33,9 @@ export interface EntryPassRow {
 /** hsc95.sp_get_entrypass_by_ids (001) */
 export interface EntryPassByIdRow extends EntryPassRow {
   EntryId: number;
+  CollegeName: string | null;
+  TShirtSize: string;
+  IncludeDriver: string; // 'Y' | 'N'
 }
 
 /** hsc95.sp_get_session_user (001) */

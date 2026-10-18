@@ -11,7 +11,7 @@ export default function AdminLoginPage() {
   return (
     <main className="relative flex min-h-full flex-1 items-center justify-center px-4 py-16">
       <ThemeToggle className="absolute right-4 top-4" />
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-soft">
+      <div className="w-full max-w-md rounded-md border border-border bg-surface p-8 shadow-soft">
         <div className="mb-6 flex items-center gap-3">
           <Emblem size={52} />
           <div>

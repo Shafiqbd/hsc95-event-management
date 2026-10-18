@@ -22,10 +22,11 @@ describe("registrationSchema", () => {
     expect(issues(valid)).toEqual([]);
   });
 
-  it("requires name, mobile, t-shirt size and photo", () => {
-    expect(issues({ formNo: "", includeDriver: false })).toEqual(
-      expect.arrayContaining(["memberName", "mobileNo", "tShirtSize", "photo"]),
-    );
+  it("requires name, mobile and t-shirt size; the photo is optional", () => {
+    const missing = issues({ formNo: "", includeDriver: false });
+    expect(missing).toEqual(expect.arrayContaining(["memberName", "mobileNo", "tShirtSize"]));
+    expect(missing).not.toContain("photo");
+    expect(issues({ ...valid, photo: undefined })).toEqual([]);
   });
 
   it("accepts an optional paper form number (ASCII or Bengali digits)", () => {

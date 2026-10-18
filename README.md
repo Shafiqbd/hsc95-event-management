@@ -11,10 +11,10 @@ database/   install order, additive functions, proposed fixes, gap analysis
 db.txt      supplied PostgreSQL specification (unchanged)
 ```
 
-> ⚠️ **Read [database/README.md](database/README.md) first.** As supplied, `hsc95.sp_user_login`
-> fails on every call (a return-type bug), so **nobody can log in** until the reviewed fix in
-> `database/proposed/002_fix_existing_functions.sql` is applied. The app also needs the additive
-> functions in `database/migrations/001_app_support_functions.sql`.
+> ⚠️ **Read [database/README.md](database/README.md) first.** The app needs pgcrypto and the
+> additive functions in `database/migrations/001_app_support_functions.sql`. The supplied
+> `hsc95.sp_user_login` fails on every call (a return-type bug), so the app logs in with
+> `sp_staff_login` from 001 instead.
 
 ## Quick start — frontend only (demo mode, no database or API needed)
 
@@ -175,25 +175,26 @@ API (`/api` prefix): `GET event` · `POST auth/login` · `POST auth/logout` · `
 
 ## Token printing
 
+- **Paper = token: 391 × 399 px** (103.5 × 105.6 mm), **one token per sheet**, no margins and
+  nothing to cut. Load paper of that size in the printer. Browser print uses
+  `@page { size: 391px 399px; margin: 0 }`; **Download PDF** (`token-pdf.ts`) produces the same
+  page size, one token per page.
 - Background: `frontend/public/images/token-background.jpg`, the supplied 294 × 366 px artwork,
-  used unchanged.
-- `EntryPass` (`frontend/src/features/token/entry-pass.tsx`) overlays the photo, name and
-  Bengali form number. Positions were measured from the artwork's box borders and are stored as
-  percentages; text is sized in container units, so the preview and the print match. The same
-  component is used for the post-registration preview, single prints and bulk prints.
-- Printing renders all tokens into one body-level print container and waits for the background,
-  every photo and the web font. It then opens **one** print dialog. In print media everything
-  else is hidden.
-- Layout: A4 portrait, 10 mm margins, **6 tokens per page** (2 × 3, each 70 × 87.1 mm) with
-  dashed cutting guides and no token split across pages.
-- **Print All Tokens** fetches the complete set from `sp_prepare_entrypass`, not just the visible
-  page. "Preview & print selected" uses `sp_get_entrypass_by_ids`.
-- For a PDF, choose **Save as PDF** in the print dialog, with A4, scale 100% and *Background
-  graphics* on.
-- A token is *ready* when the registration is active and has an active photo and a form number.
-- The supplied background is low resolution (294 × 366 px), so it prints at about 107 dpi at
-  70 mm. A higher-resolution export of the same artwork will print sharper; replace the file and
-  keep the same aspect ratio.
+  stretched to 391 × 399. The photo is cover-fitted into the photo box (never distorted).
+- `EntryPass` (`frontend/src/features/token/entry-pass.tsx`) shows, top to bottom: token no.,
+  name, mobile, T-shirt size and a green **With Driver** badge when a driver is
+  included (`tokenDetails()`, shared with the PDF). Positions are percentages of the artwork's
+  boxes and text is in container units, so preview, print and PDF match.
+- **Print All Tokens** fetches the complete set (not just the visible page) and "Preview & print
+  selected" fetches the chosen ones, both from `sp_get_entrypass_by_ids`. The preview shows one
+  token at a time (Previous / Next or ← / →) with **Print this token**, **Print all** (one print
+  dialog, one sheet per token) and **Download PDF**.
+- Printing waits for the background, every photo and the web font before opening the dialog. In
+  print media everything else is hidden.
+- A token is *ready* when the registration is active and has a form (token) number. The photo is
+  optional; a token without one prints with an empty photo box.
+- The supplied background is low resolution (294 × 366 px), so it prints at about 72–90 dpi at
+  this size. A higher-resolution export of the same artwork will print sharper.
 
 ## Commands
 

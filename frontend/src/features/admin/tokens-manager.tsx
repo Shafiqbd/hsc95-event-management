@@ -1,14 +1,15 @@
 "use client";
 
-import { Eye, FileDown, Printer, RefreshCw, Ticket, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { ChevronLeft, ChevronRight, Eye, FileDown, MessageSquareText, Printer, RefreshCw, Ticket, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, Card, EmptyState, Skeleton } from "@/components/ui/feedback";
-import { EntryPass } from "@/features/token/entry-pass";
-import { TOKENS_PER_PAGE } from "@/features/token/print";
+import { useToast } from "@/components/ui/toast";
+import { EntryPass, TOKEN_H_PX, TOKEN_W_PX } from "@/features/token/entry-pass";
 import { usePrintTokens } from "@/features/token/print-sheet";
 import { pdfFileName, usePdfDownload } from "@/features/token/use-pdf-download";
 import { api, errorMessage } from "@/lib/api";
+import { SMS_BATCH_SIZE } from "@/lib/live-api";
 import type { Registration, TokenData } from "@/types/api";
 import { isOwnScope, useStaff } from "./admin-shell";
 import { Pagination, RegistrationsTable, SearchBox } from "./registrations-table";
@@ -21,8 +22,11 @@ interface Preview {
 
 export function TokensManager() {
   const { search, page, setPage, onSearch, result } = useRegistrationPage();
-  const own = isOwnScope(useStaff());
+  const staff = useStaff();
+  const own = isOwnScope(staff);
+  const toast = useToast();
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [smsProgress, setSmsProgress] = useState<{ done: number; total: number } | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<"all" | "selected" | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -48,6 +52,39 @@ export function TokensManager() {
     });
   }, []);
 
+  /**
+   * Admin: SMS every selected member their token number. Sent in batches so
+   * each request stays well inside the proxy timeout; the button shows
+   * progress until every batch is done.
+   */
+  const sendSms = async () => {
+    const ids = [...selected];
+    if (ids.length === 0 || smsProgress) return;
+    if (!window.confirm(`Send the token number by SMS to ${ids.length} selected member${ids.length === 1 ? "" : "s"}?`)) return;
+
+    let sent = 0;
+    const failed: string[] = [];
+    setSmsProgress({ done: 0, total: ids.length });
+    try {
+      for (let i = 0; i < ids.length; i += SMS_BATCH_SIZE) {
+        const result = await api.sendTokenSms(ids.slice(i, i + SMS_BATCH_SIZE));
+        sent += result.sent;
+        failed.push(...result.failed.map((f) => `#${f.formNo ?? f.entryId}: ${f.reason}`));
+        setSmsProgress({ done: Math.min(i + SMS_BATCH_SIZE, ids.length), total: ids.length });
+      }
+      if (failed.length === 0) {
+        toast.success("SMS has been sent to all registered users", `${sent} message${sent === 1 ? "" : "s"} sent.`);
+        setSelected(new Set());
+      } else {
+        toast.error(`${sent} SMS sent, ${failed.length} failed`, failed.slice(0, 3).join(" · ") + (failed.length > 3 ? " …" : ""));
+      }
+    } catch (error) {
+      toast.error(sent > 0 ? `SMS stopped after ${sent} sent` : "SMS could not be sent", errorMessage(error));
+    } finally {
+      setSmsProgress(null);
+    }
+  };
+
   /** Always fetches the complete dataset from the server, never just the visible page. */
   const openPreview = async (mode: "all" | "selected") => {
     setPreviewError(null);
@@ -68,8 +105,8 @@ export function TokensManager() {
         <div>
           <h1 className="text-2xl font-bold">Tokens &amp; Printing</h1>
           <p className="text-sm text-muted">
-            {own && "Tokens for the members you registered. "}A token is ready when the registration is active, has a photo and a form
-            number.
+            {own && "Tokens for the members you registered. "}A token is ready when the registration is active and has a token
+            number; members without a photo print with an empty photo box.
           </p>
         </div>
         <Button
@@ -92,16 +129,30 @@ export function TokensManager() {
             </button>
           )}
         </p>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={selected.size === 0}
-          loading={loadingPreview === "selected"}
-          onClick={() => openPreview("selected")}
-          icon={<Eye className="h-4 w-4" aria-hidden />}
-        >
-          Preview &amp; print selected
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {staff.role === "admin" && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={selected.size === 0}
+              loading={smsProgress !== null}
+              onClick={sendSms}
+              icon={<MessageSquareText className="h-4 w-4" aria-hidden />}
+            >
+              {smsProgress ? `Sending SMS ${smsProgress.done}/${smsProgress.total}…` : "Send SMS"}
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={selected.size === 0}
+            loading={loadingPreview === "selected"}
+            onClick={() => openPreview("selected")}
+            icon={<Eye className="h-4 w-4" aria-hidden />}
+          >
+            Preview &amp; print selected
+          </Button>
+        </div>
       </Card>
 
       {previewError && <Alert tone="danger" title="Could not load print data">{previewError}</Alert>}
@@ -134,7 +185,9 @@ function PrintPreview({ preview, onClose }: { preview: Preview; onClose: () => v
   const printer = usePrintTokens();
   const pdf = usePdfDownload();
   const count = preview.tokens.length;
-  const pages = Math.ceil(count / TOKENS_PER_PAGE);
+  const [index, setIndex] = useState(0);
+  const current = preview.tokens[Math.min(index, count - 1)];
+  const go = useCallback((step: number) => setIndex((i) => Math.min(Math.max(i + step, 0), count - 1)), [count]);
   const withoutPhoto = preview.tokens.filter((t) => !t.photoUrl).length;
 
   return (
@@ -145,7 +198,7 @@ function PrintPreview({ preview, onClose }: { preview: Preview; onClose: () => v
             Print preview — {preview.title}
           </h2>
           <p className="text-sm text-muted">
-            {count} token{count === 1 ? "" : "s"} · {pages} A4 page{pages === 1 ? "" : "s"} ({TOKENS_PER_PAGE} per page, 70 × 87 mm)
+            {count} token{count === 1 ? "" : "s"} · one per page on {TOKEN_W_PX} × {TOKEN_H_PX} px paper
           </p>
         </div>
         <div className="flex gap-2">
@@ -168,19 +221,21 @@ function PrintPreview({ preview, onClose }: { preview: Preview; onClose: () => v
             onClick={() => printer.print(preview.tokens)}
             icon={<Printer className="h-4 w-4" aria-hidden />}
           >
-            {printer.phase === "loading-images" ? "Loading photos…" : `Print ${count}`}
+            {printer.phase === "loading-images" ? "Loading photos…" : `Print all ${count}`}
           </Button>
         </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-5">
         <Alert tone="info" title="Download or print">
-          “Download PDF” saves an A4 file (6 tokens per page, with cutting guides). “Print” opens one print dialog for all tokens.
+          Load {TOKEN_W_PX} × {TOKEN_H_PX} px paper in the printer; every token prints on its own sheet, so nothing has to be cut.
+          “Print this token” prints the one shown, “Print all” prints every token in one print dialog, and “Download PDF” saves
+          the same pages as a file.
         </Alert>
         {pdf.error && <Alert tone="danger" title="PDF could not be created">{pdf.error}</Alert>}
         {withoutPhoto > 0 && (
-          <Alert tone="warning" title={`${withoutPhoto} token(s) without a usable photo`}>
-            Their photo path is not a managed upload or URL. They will print with an empty photo box.
+          <Alert tone="warning" title={`${withoutPhoto} token(s) without a photo`}>
+            They will print with an empty photo box.
           </Alert>
         )}
         {printer.report && printer.report.failed > 0 && (
@@ -190,19 +245,53 @@ function PrintPreview({ preview, onClose }: { preview: Preview; onClose: () => v
         )}
         {count === 0 ? (
           <EmptyState icon={Ticket} title="No tokens to print">
-            No registration currently has both an active photo and a form number.
+            No active registration with a token number yet.
           </EmptyState>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-            {preview.tokens.map((token, i) => (
-              <div key={token.entryId ?? i} className="overflow-hidden rounded-md ring-1 ring-border">
-                <EntryPass token={token} />
-              </div>
-            ))}
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" size="sm" disabled={index === 0} onClick={() => go(-1)} icon={<ChevronLeft className="h-4 w-4" aria-hidden />}>
+                Previous
+              </Button>
+              <p className="min-w-24 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+                {Math.min(index, count - 1) + 1} / {count}
+              </p>
+              <Button variant="secondary" size="sm" disabled={index >= count - 1} onClick={() => go(1)}>
+                Next
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+            <div className="w-full overflow-hidden rounded-md shadow-soft ring-1 ring-border" style={{ maxWidth: TOKEN_W_PX }}>
+              <EntryPass token={current} />
+            </div>
+            <Button
+              variant="gold"
+              size="sm"
+              disabled={pdf.busy}
+              loading={printer.busy}
+              onClick={() => printer.print([current])}
+              icon={<Printer className="h-4 w-4" aria-hidden />}
+            >
+              Print this token
+            </Button>
+            <ArrowKeys onStep={go} />
           </div>
         )}
       </div>
       {printer.portal}
     </div>
   );
+}
+
+/** ← / → move through the preview one token at a time. */
+function ArrowKeys({ onStep }: { onStep: (step: number) => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") onStep(-1);
+      if (e.key === "ArrowRight") onStep(1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onStep]);
+  return null;
 }

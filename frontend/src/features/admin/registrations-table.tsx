@@ -60,7 +60,7 @@ export function Pagination({
           type="button"
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
-          className="inline-flex h-9 items-center gap-1 rounded-lg border border-border bg-surface px-3 disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-border bg-surface px-3 disabled:opacity-50"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden /> Prev
         </button>
@@ -71,7 +71,7 @@ export function Pagination({
           type="button"
           onClick={() => onPage(page + 1)}
           disabled={page >= pages}
-          className="inline-flex h-9 items-center gap-1 rounded-lg border border-border bg-surface px-3 disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-border bg-surface px-3 disabled:opacity-50"
         >
           Next <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
@@ -138,7 +138,7 @@ export function RegistrationsTable({
   const allPageSelected = selection && selectable.length > 0 && selectable.every((r) => selection.selected.has(r.entryId));
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
+    <div className="overflow-x-auto rounded-md border border-border bg-surface">
       <table className="w-full min-w-[56rem] text-left text-sm">
         <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-muted">
           <tr>
@@ -184,7 +184,7 @@ export function RegistrationsTable({
               ))}
               {onOpen && (
                 <td className="px-4 py-2.5 text-right">
-                  <button type="button" onClick={() => onOpen(r)} className="rounded-lg px-3 py-1.5 font-semibold text-primary hover:bg-primary/10">
+                  <button type="button" onClick={() => onOpen(r)} className="rounded-md px-3 py-1.5 font-semibold text-primary hover:bg-primary/10">
                     View
                   </button>
                 </td>

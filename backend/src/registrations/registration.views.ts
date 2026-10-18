@@ -33,6 +33,9 @@ export interface TokenView {
   formNo: number | null;
   mobileNo: string | null;
   photoUrl: string | null;
+  collegeName: string | null;
+  tShirtSize: string | null;
+  includeDriver: boolean;
 }
 
 export type PhotoUrlResolver = (photoPath: string | null) => string | null;
@@ -65,7 +68,7 @@ export function toRegistrationView(row: RegistrationRow, photoUrl: PhotoUrlResol
     isActive,
     hasPhoto,
     photoUrl: photoUrl(row.PhotoPath),
-    tokenReady: isActive && hasPhoto && formNo !== null,
+    tokenReady: isActive && formNo !== null,
   };
 }
 
@@ -76,6 +79,9 @@ export function toTokenView(row: EntryPassRow | EntryPassByIdRow, photoUrl: Phot
     formNo: toNumberOrNull(row.FormNo),
     mobileNo: row.MobileNo,
     photoUrl: photoUrl(row.PhotoPath),
+    collegeName: 'CollegeName' in row ? row.CollegeName : null,
+    tShirtSize: 'TShirtSize' in row ? row.TShirtSize?.trim() || null : null,
+    includeDriver: 'IncludeDriver' in row && row.IncludeDriver === 'Y',
   };
 }
 

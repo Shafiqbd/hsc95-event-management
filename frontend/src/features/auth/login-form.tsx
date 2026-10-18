@@ -94,7 +94,7 @@ export function LoginForm() {
       </Button>
 
       {isMockMode && (
-        <div className="rounded-xl border border-dashed border-gold/50 bg-gold/5 p-4 text-sm">
+        <div className="rounded-md border border-dashed border-gold/50 bg-gold/5 p-4 text-sm">
           <p className="flex items-center gap-2 font-semibold text-gold">
             <FlaskConical className="h-4 w-4" aria-hidden /> ডেমো মোড — নমুনা অ্যাকাউন্ট
           </p>
@@ -103,7 +103,7 @@ export function LoginForm() {
               <button
                 key={role}
                 type="button"
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-left hover:border-primary/60"
+                className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2 text-left hover:border-primary/60"
                 onClick={() => {
                   setValue("loginName", DEMO_ACCOUNTS[role].loginName, { shouldValidate: true });
                   setValue("password", DEMO_ACCOUNTS[role].password, { shouldValidate: true });

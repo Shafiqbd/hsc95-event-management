@@ -106,7 +106,7 @@ export function createSeedDb(): MockDb {
       isActive,
       hasPhoto,
       photoUrl: hasPhoto ? photo(entryId) : null,
-      tokenReady: isActive && hasPhoto,
+      tokenReady: isActive,
     };
   });
 

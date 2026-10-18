@@ -27,7 +27,7 @@ const toneIconColor: Record<Tone, string> = {
 export function Alert({ tone = "info", title, children }: { tone?: Tone; title?: string; children?: ReactNode }) {
   const Icon = toneIcon[tone];
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={`flex gap-3 rounded-xl border p-4 text-sm ${toneClass[tone]}`}>
+    <div role={tone === "danger" ? "alert" : "status"} className={`flex gap-3 rounded-md border p-4 text-sm ${toneClass[tone]}`}>
       <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${toneIconColor[tone]}`} aria-hidden />
       <div className="space-y-1">
         {title && <p className="font-semibold">{title}</p>}
@@ -38,7 +38,7 @@ export function Alert({ tone = "info", title, children }: { tone?: Tone; title?:
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-surface-2 ${className}`} aria-hidden />;
+  return <div className={`animate-pulse rounded-md bg-surface-2 ${className}`} aria-hidden />;
 }
 
 export function EmptyState({
@@ -53,7 +53,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border px-6 py-12 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-muted">
         <Icon className="h-6 w-6" aria-hidden />
       </span>
@@ -84,5 +84,5 @@ export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; childr
 }
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
-  return <div className={`rounded-2xl border border-border bg-surface shadow-soft ${className}`}>{children}</div>;
+  return <div className={`rounded-md border border-border bg-surface shadow-soft ${className}`}>{children}</div>;
 }
