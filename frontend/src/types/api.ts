@@ -26,7 +26,11 @@ export interface Registration {
   mobileNo: string | null;
   facebookId: string | null;
   tShirtSize: string;
+  /** null for registrations saved before the field existed. */
+  gender: "M" | "F" | null;
   includeDriver: boolean;
+  /** SMS accepted by the gateway for this registration (TotalSMSSent). */
+  smsSent: number;
   amountPaid: number;
   paymentStatus: "unverified";
   entryDate: string;
@@ -85,6 +89,8 @@ export interface RegistrationResult {
   formNo: number;
   amountPaid: number;
   paymentStatus: "unverified";
+  /** The automatic "registration completed" SMS ("skipped" when SMS is not configured). */
+  sms?: "sent" | "failed" | "skipped";
 }
 
 export interface NewUser {

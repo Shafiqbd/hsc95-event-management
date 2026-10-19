@@ -164,9 +164,11 @@ API (`/api` prefix): `GET event` · `POST auth/login` · `POST auth/logout` · `
 
 - Accepts JPEG, PNG or WebP up to 2 MB. The **actual bytes** are checked, and the declared type
   must match them.
-- Files are saved as `UPLOAD_DIR/photos/<uuid>.<ext>`. Only that key goes into `T_Photos.PhotoPath`.
+- Files are named after the token, like the SMS: `UPLOAD_DIR/photos/95-0043.<ext>` (saved inside the
+  registration transaction once the token number is known). Only that key goes into
+  `T_Photos.PhotoPath`. Photos saved earlier keep their `<uuid>.<ext>` names.
 - Photos are never served statically. Members get their own photo from `/api/registrations/me/photo`;
-  admins use `/api/admin/photos/<uuid>.<ext>` (validated name, so no path traversal).
+  admins use `/api/admin/photos/95-0043.<ext>` (validated name, so no path traversal).
 - Existing `PhotoPath` values that are `http(s)` URLs are shown as-is; any other value is treated
   as "no photo".
 - `PhotoStorageService` is the single storage class. To move to object storage, replace it with

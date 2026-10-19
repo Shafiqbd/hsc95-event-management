@@ -2,6 +2,7 @@ import { BadRequestException, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
+import { SmsModule } from '../sms/sms.module.js';
 import { ALLOWED_PHOTO_MIME_TYPES } from '../storage/photo-validation.js';
 import { AdminRegistrationsController } from './admin-registrations.controller.js';
 import { AdminRegistrationsService } from './admin-registrations.service.js';
@@ -10,6 +11,7 @@ import { RegistrationsService } from './registrations.service.js';
 
 @Module({
   imports: [
+    SmsModule,
     MulterModule.registerAsync({
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => ({

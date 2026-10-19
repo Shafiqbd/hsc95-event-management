@@ -4,6 +4,8 @@ import { CleanOptionalText, CleanText, ToBoolean } from '../../common/sanitize.j
 
 export const T_SHIRT_SIZES = ['M', 'L', 'XL', 'XXL'] as const;
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
+/** Stored in T_EventForm.Gender (varchar(5)): M = male, F = female. */
+export const GENDERS = ['M', 'F'] as const;
 export const BD_MOBILE_PATTERN = /^01[3-9][0-9]{8}$/;
 
 const BENGALI_DIGITS = '০১২৩৪৫৬৭৮৯';
@@ -85,6 +87,10 @@ export class CreateRegistrationDto {
   @CleanText()
   @IsIn(T_SHIRT_SIZES)
   tShirtSize!: string;
+
+  @CleanText()
+  @IsIn(GENDERS, { message: 'gender must be M or F' })
+  gender!: 'M' | 'F';
 
   @ToBoolean()
   @IsBoolean()

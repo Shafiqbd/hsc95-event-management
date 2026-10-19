@@ -54,8 +54,12 @@ export interface AppConfig {
     /** Empty = SMS sending is disabled (the API answers 503). */
     apiKey: string;
     senderId: string;
-    /** The token number is appended: "<message>: 0043". */
+    /** Token SMS template with {name}, {token} (e.g. 0001) and {counter} placeholders. */
     message: string;
+    /** Sent right after a registration is saved; {name} placeholder. */
+    registrationMessage: string;
+    /** Counter number shown in the SMS ({counter}); 1 until the organiser changes it. */
+    counterNo: string;
   };
 }
 
@@ -163,7 +167,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       apiUrl: env.SMS_API_URL?.trim() || 'http://bulksmsbd.net/api/smsapi',
       apiKey: env.SMS_API_KEY?.trim() ?? '',
       senderId: env.SMS_API_SENDER_KEY?.trim() ?? '',
-      message: env.SMS_API_MESSAGE?.trim() || 'Your registration is completed and your token number is',
+      message:
+        env.SMS_API_MESSAGE?.trim() ||
+        'Dear {name}, your registration completed. You token # is 95-{token}, counter no #{counter}',
+      registrationMessage: env.SMS_REGISTRATION_MESSAGE?.trim() || 'Dear {name}, your registration completed.',
+      counterNo: env.SMS_COUNTER_NO?.trim() || '1',
     },
   };
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BLOOD_GROUPS, T_SHIRT_SIZES } from "@/config/event";
+import { BLOOD_GROUPS, GENDERS, T_SHIRT_SIZES } from "@/config/event";
 
 export const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
 export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -48,6 +48,7 @@ export const registrationSchema = z.object({
   tShirtSize: z.enum(T_SHIRT_SIZES.map((s) => s.value) as [string, ...string[]], {
     error: "টি-শার্ট সাইজ নির্বাচন করুন",
   }),
+  gender: z.enum(GENDERS.map((g) => g.value) as ["M", "F"], { error: "লিঙ্গ নির্বাচন করুন" }),
   includeDriver: z.boolean(),
   // Optional: when a photo is chosen it must still be a small JPG/PNG/WebP.
   photo: z
@@ -75,6 +76,7 @@ export function toFormData(values: RegistrationValues): FormData {
     mobileNo: normalizeMobile(values.mobileNo),
     facebookId: values.facebookId,
     tShirtSize: values.tShirtSize,
+    gender: values.gender,
   };
   for (const [key, value] of Object.entries(text)) {
     if (value) fd.append(key, value);

@@ -11,9 +11,10 @@ function setup() {
     .on('sp_check_registration_duplicate', () => [{ MobileNoExists: false, FormNoExists: false }])
     .on('sp_get_next_form_no', () => [{ FormNo: '12' }])
     .on('sp_insert_event_form', () => [{ EntryId: 90 }])
+    .on('sp_set_event_form_gender', () => [{ Updated: true }])
     .on('sp_insert_event_form_photo', () => [{ PhotoId: '1' }]);
   const storage = {
-    save: vi.fn(async () => 'photos/11111111-2222-3333-4444-555555555555.jpg'),
+    save: vi.fn(async (_body: Buffer, ext: string, name?: string) => `photos/${name}.${ext}`),
     remove: vi.fn(async () => undefined),
   };
   const service = new RegistrationsService(
@@ -29,6 +30,7 @@ const dto = (over: Record<string, unknown> = {}) =>
     memberName: 'রহিম',
     mobileNo: '01711111111',
     tShirtSize: 'L',
+    gender: 'F',
     includeDriver: true,
     ...over,
   });
@@ -38,7 +40,7 @@ const OPERATOR = 5;
 
 describe('RegistrationsService.register', () => {
   it('saves the form in one transaction with EntryBy = the signed-in user', async () => {
-    const { db, service } = setup();
+    const { db, storage, service } = setup();
     const result = await service.register(dto(), photo, OPERATOR);
 
     expect(result).toEqual({ entryId: 90, formNo: 12, amountPaid: 2000 });
@@ -46,6 +48,7 @@ describe('RegistrationsService.register', () => {
       'sp_check_registration_duplicate',
       'sp_get_next_form_no',
       'sp_insert_event_form',
+      'sp_set_event_form_gender',
       'sp_insert_event_form_photo',
     ]);
     expect(db.called('sp_insert_user')).toBe(false); // members get no login account
@@ -55,6 +58,10 @@ describe('RegistrationsService.register', () => {
     expect(form[12]).toBeNull(); // PassCode not invented
     expect(form[13]).toBe('Y'); // IncludeDriver
     expect(form[14]).toBe(2000); // AmountPaid = 1500 + 500
+    // The photo is named after the token: 95-0012 (same style as the SMS).
+    expect(storage.save).toHaveBeenCalledWith(photo.buffer, 'jpg', '95-0012');
+    expect(db.calls[3].params).toEqual([90, 'F']); // gender, same transaction
+    expect(db.calls[4].params).toEqual([90, 'photos/95-0012.jpg', 1]);
     expect(db.committed).toBe(1);
   });
 
@@ -76,7 +83,7 @@ describe('RegistrationsService.register', () => {
     expect(db.called('sp_insert_event_form')).toBe(true);
   });
 
-  it('rejects a duplicate form number, rolls back and deletes the stored photo', async () => {
+  it('rejects a duplicate form number before any photo file is written', async () => {
     const { db, storage, service } = setup();
     db.on('sp_check_registration_duplicate', () => [{ MobileNoExists: false, FormNoExists: true }]);
     const error = await service.register(dto({ formNo: 5 }), photo, OPERATOR).catch((e: unknown) => e);
@@ -84,7 +91,8 @@ describe('RegistrationsService.register', () => {
     expect((error as Error).message).toMatch(/form number/);
     expect(db.called('sp_insert_event_form')).toBe(false);
     expect(db.rolledBack).toBe(1);
-    expect(storage.remove).toHaveBeenCalledOnce();
+    expect(storage.save).not.toHaveBeenCalled();
+    expect(storage.remove).not.toHaveBeenCalled();
   });
 
   it('cleans up when a later database step fails (no orphan photo file)', async () => {

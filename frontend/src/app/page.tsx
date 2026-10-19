@@ -1,28 +1,20 @@
-import {
-  CalendarDays,
-  Camera,
-  Car,
-  ClipboardList,
-  IdCard,
-  MapPin,
-  Printer,
-  Shirt,
-  Ticket,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays, Car, IdCard, MapPin } from "lucide-react";
+// Hidden for now with the সুবিধাসমূহ section below; restore together with it:
+// import { Camera, ClipboardList, Printer, Shirt, Ticket, type LucideIcon } from "lucide-react";
 import { Hero } from "@/components/home/hero";
 import { PublicShell } from "@/components/layout/public-shell";
 import { EVENT } from "@/config/event";
 import { formatTaka } from "@/lib/format";
 
-const FACILITIES: { icon: LucideIcon; title: string; description: string }[] = [
-  { icon: ClipboardList, title: "রেজিস্ট্রেশন ডেস্ক", description: "কাগজের ফরম জমা দিলে রেজিস্ট্রেশন ডেস্ক থেকে আপনার তথ্য সংরক্ষণ করা হবে।" },
-  { icon: Camera, title: "সদস্যের ছবি", description: "প্রবেশ পাসে ব্যবহারের জন্য ফরমের সঙ্গে একটি ছবি দিন।" },
-  { icon: Shirt, title: "পোলো টি-শার্ট সাইজ", description: "M, L, XL ও XXL — আপনার মাপের টি-শার্ট সাইজ ফরমে উল্লেখ করুন।" },
-  { icon: Ticket, title: "প্রবেশ টোকেন / পাস", description: "ছবি, নাম ও টোকেন নম্বরসহ ব্যক্তিগত প্রবেশ পাস।" },
-  { icon: Car, title: "ড্রাইভার সুবিধা", description: "সঙ্গে ড্রাইভার থাকলে ফরমে উল্লেখ করুন (অতিরিক্ত ফি প্রযোজ্য)।" },
-  { icon: Printer, title: "টোকেন প্রিন্ট", description: "আয়োজকরা সকল সদস্যের প্রবেশ পাস একসাথে প্রিন্ট করে বিতরণ করবেন।" },
-];
+// সুবিধাসমূহ (facilities) — hidden for now; uncomment with the section and the header link.
+// const FACILITIES: { icon: LucideIcon; title: string; description: string }[] = [
+//   { icon: ClipboardList, title: "রেজিস্ট্রেশন ডেস্ক", description: "কাগজের ফরম জমা দিলে রেজিস্ট্রেশন ডেস্ক থেকে আপনার তথ্য সংরক্ষণ করা হবে।" },
+//   { icon: Camera, title: "সদস্যের ছবি", description: "প্রবেশ পাসে ব্যবহারের জন্য ফরমের সঙ্গে একটি ছবি দিন।" },
+//   { icon: Shirt, title: "পোলো টি-শার্ট সাইজ", description: "M, L, XL ও XXL — আপনার মাপের টি-শার্ট সাইজ ফরমে উল্লেখ করুন।" },
+//   { icon: Ticket, title: "প্রবেশ টোকেন / পাস", description: "ছবি, নাম ও টোকেন নম্বরসহ ব্যক্তিগত প্রবেশ পাস।" },
+//   { icon: Car, title: "ড্রাইভার সুবিধা", description: "সঙ্গে ড্রাইভার থাকলে ফরমে উল্লেখ করুন (অতিরিক্ত ফি প্রযোজ্য)।" },
+//   { icon: Printer, title: "টোকেন প্রিন্ট", description: "আয়োজকরা সকল সদস্যের প্রবেশ পাস একসাথে প্রিন্ট করে বিতরণ করবেন।" },
+// ];
 
 const STEPS = [
   "নিবন্ধন ফরম পূরণ করে একটি ছবিসহ রেজিস্ট্রেশন ডেস্কে জমা দিন",
@@ -59,7 +51,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Facilities */}
+      {/* সুবিধাসমূহ (facilities) — hidden for now. To show it again, uncomment this block,
+          FACILITIES and its icon imports at the top, and the "/#facilities" link in site-header.tsx.
       <section id="facilities" className="scroll-mt-20">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-3xl font-bold">সুবিধাসমূহ</h2>
@@ -91,6 +84,7 @@ export default function HomePage() {
           )}
         </div>
       </section>
+      */}
 
       {/* Registration CTA */}
       <section id="registration" className="scroll-mt-20 px-4 pb-20">

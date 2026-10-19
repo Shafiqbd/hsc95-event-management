@@ -76,6 +76,8 @@ export interface RegistrationRow {
   MemberLock: string;
   MemberStatus: string;
   PhotoPath: string | null;
+  Gender: string | null;
+  TotalSMSSent: string;
 }
 
 /** hsc95.sp_get_registration_list (001) */

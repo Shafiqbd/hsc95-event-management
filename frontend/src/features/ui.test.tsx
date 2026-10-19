@@ -15,6 +15,8 @@ const registration = (over: Partial<Registration> = {}): Registration => ({
   entryId: 1,
   formNo: 7,
   memberName: "রহিম উদ্দিন",
+  gender: "M",
+  smsSent: 0,
   collegeName: "ঢাকা কলেজ",
   thanaName: null,
   zilaName: null,

@@ -41,3 +41,15 @@ export const T_SHIRT_SIZES = [
 export type TShirtSize = (typeof T_SHIRT_SIZES)[number]["value"];
 
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+
+/** Stored in T_EventForm.Gender as M / F. */
+export const GENDERS = [
+  { value: "M", label: "পুরুষ" },
+  { value: "F", label: "মহিলা" },
+] as const;
+
+export type Gender = (typeof GENDERS)[number]["value"];
+
+export function genderLabel(value: string | null | undefined): string {
+  return GENDERS.find((g) => g.value === value)?.label ?? "—";
+}

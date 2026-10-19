@@ -17,30 +17,30 @@ import { RoleGate, ROLE_LABEL } from "./admin-shell";
 
 export const newUserSchema = z
   .object({
-    fullName: z.string().trim().min(2, "Enter the full name").max(200),
+    fullName: z.string().trim().min(2, "পুরো নাম লিখুন").max(200, "নাম সর্বোচ্চ ২০০ অক্ষর"),
     loginName: z
       .string()
       .trim()
-      .min(3, "At least 3 characters")
-      .max(100)
-      .regex(/^[A-Za-z0-9._-]+$/, "Letters, digits, '.', '_' and '-' only"),
-    email: z.string().trim().pipe(z.email("Enter a valid e-mail address")),
+      .min(3, "কমপক্ষে ৩ অক্ষর")
+      .max(100, "সর্বোচ্চ ১০০ অক্ষর")
+      .regex(/^[A-Za-z0-9._-]+$/, "শুধু ইংরেজি অক্ষর, সংখ্যা এবং . _ - ব্যবহার করা যাবে"),
+    email: z.string().trim().pipe(z.email("সঠিক ই-মেইল ঠিকানা লিখুন")),
     contactNumber: z
       .string()
       .trim()
-      .refine((v) => v === "" || /^01[3-9][0-9]{8}$/.test(normalizeMobile(v)), "11-digit mobile number (01XXXXXXXXX)"),
+      .refine((v) => v === "" || /^01[3-9][0-9]{8}$/.test(normalizeMobile(v)), "সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (01XXXXXXXXX)"),
     role: z.enum(["admin", "register", "viewer"]),
-    password: z.string().min(8, "At least 8 characters").max(72, "At most 72 characters"),
+    password: z.string().min(8, "কমপক্ষে ৮ অক্ষর").max(72, "সর্বোচ্চ ৭২ অক্ষর"),
     confirmPassword: z.string(),
   })
-  .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
+  .refine((v) => v.password === v.confirmPassword, { path: ["confirmPassword"], message: "পাসওয়ার্ড দুটি মিলছে না" });
 
 type NewUserValues = z.infer<typeof newUserSchema>;
 
 const ROLE_HELP: Record<Role, string> = {
-  admin: "Everything, including creating users",
-  register: "Enters member registrations",
-  viewer: "Read-only lists, statistics and token PDFs",
+  admin: "সব কাজ, নতুন ইউজার তৈরিসহ",
+  register: "সদস্যদের নিবন্ধন এন্ট্রি করেন",
+  viewer: "শুধু তালিকা, পরিসংখ্যান ও টোকেন PDF দেখতে পারেন",
 };
 
 export function UsersView() {
@@ -122,7 +122,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
         role: values.role,
         password: values.password,
       });
-      toast.success("User created", `"${values.loginName}" can now sign in as ${ROLE_LABEL[values.role]}.`);
+      toast.success("ইউজার তৈরি হয়েছে", `"${values.loginName}" এখন ${ROLE_LABEL[values.role]} হিসেবে লগইন করতে পারবেন।`);
       reset();
       onCreated();
     } catch (error) {
@@ -161,21 +161,26 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
   return (
     <Card className="p-6">
       <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-        <UserPlus className="h-5 w-5 text-primary" aria-hidden /> Create user
+        <UserPlus className="h-5 w-5 text-primary" aria-hidden /> নতুন ইউজার তৈরি
       </h2>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
-          {field("fullName", "Full name", { required: true, autoComplete: "off" })}
-          {field("loginName", "Login name", { required: true, autoComplete: "off" })}
-          {field("email", "E-mail", { required: true, type: "email", autoComplete: "off" })}
-          {field("contactNumber", "Contact number (optional)", { type: "tel", placeholder: "01XXXXXXXXX" })}
-          {field("password", "Password", { required: true, type: "password", autoComplete: "new-password" })}
-          {field("confirmPassword", "Repeat password", { required: true, type: "password", autoComplete: "new-password" })}
+          {field("fullName", "পুরো নাম", { required: true, autoComplete: "off", placeholder: "ইউজারের পুরো নাম" })}
+          {field("loginName", "লগইন নাম", { required: true, autoComplete: "off", placeholder: "যেমন: desk1 (ইংরেজিতে)" })}
+          {field("email", "ই-মেইল", { required: true, type: "email", autoComplete: "off", placeholder: "name@example.com" })}
+          {field("contactNumber", "মোবাইল নম্বর (ঐচ্ছিক)", { type: "tel", placeholder: "01XXXXXXXXX" })}
+          {field("password", "পাসওয়ার্ড", { required: true, type: "password", autoComplete: "new-password", placeholder: "কমপক্ষে ৮ অক্ষর" })}
+          {field("confirmPassword", "পাসওয়ার্ড আবার লিখুন", {
+            required: true,
+            type: "password",
+            autoComplete: "new-password",
+            placeholder: "একই পাসওয়ার্ড আবার লিখুন",
+          })}
         </div>
 
         <fieldset>
           <legend className="mb-2 text-sm font-medium">
-            User type
+            ইউজারের ধরন
             <span className="ml-0.5 text-danger" aria-hidden>
               *
             </span>
@@ -197,7 +202,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
         {message && <Alert tone={message.tone}>{message.text}</Alert>}
 
         <Button type="submit" loading={isSubmitting} icon={<UserPlus className="h-4 w-4" aria-hidden />}>
-          Create user
+          ইউজার তৈরি করুন
         </Button>
       </form>
     </Card>

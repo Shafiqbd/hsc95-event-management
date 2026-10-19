@@ -10,7 +10,8 @@ import { buttonClass } from "@/components/ui/button";
 const NAV = [
   { href: "/", label: "হোম" },
   { href: "/#event-info", label: "ইভেন্ট তথ্য" },
-  { href: "/#facilities", label: "সুবিধাসমূহ" },
+  // Hidden with the সুবিধাসমূহ section on the home page:
+  // { href: "/#facilities", label: "সুবিধাসমূহ" },
   { href: "/#registration", label: "নিবন্ধন" },
 ];
 
@@ -42,7 +43,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link href="/backend/login" className={buttonClass("primary", "sm", "hidden sm:inline-flex")}>
-            স্টাফ লগইন
+            অ্যাডমিন লগইন
           </Link>
           <button
             type="button"
@@ -69,7 +70,7 @@ export function SiteHeader() {
             ))}
           </ul>
           <Link href="/backend/login" onClick={close} className={buttonClass("primary", "md", "w-full")}>
-            স্টাফ লগইন
+            অ্যাডমিন লগইন
           </Link>
         </nav>
       )}

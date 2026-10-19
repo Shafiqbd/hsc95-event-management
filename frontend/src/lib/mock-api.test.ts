@@ -11,6 +11,7 @@ function registrationForm(mobileNo: string, includeDriver: boolean, formNo?: str
   fd.append("memberName", "নতুন সদস্য");
   fd.append("mobileNo", mobileNo);
   fd.append("tShirtSize", "XL");
+  fd.append("gender", "F");
   fd.append("includeDriver", String(includeDriver));
   fd.append("photo", photo);
   return fd;

@@ -153,6 +153,9 @@ $$ LANGUAGE plpgsql;
 --    of LIKE so user input can never act as a wildcard pattern.
 ----------------------------------------------------------------------
 
+-- Result columns changed (Gender, TotalSMSSent added), which CREATE OR REPLACE cannot do in place.
+DROP FUNCTION IF EXISTS hsc95.sp_get_registration_list(text, integer, integer, integer);
+
 CREATE OR REPLACE FUNCTION hsc95.sp_get_registration_list(
     p_search text,
     p_limit integer,
@@ -179,6 +182,8 @@ RETURNS TABLE (
     "MemberLock" character(1),
     "MemberStatus" numeric(1,0),
     "PhotoPath" text,
+    "Gender" character varying(5),
+    "TotalSMSSent" numeric,
     "TotalCount" bigint
 ) AS $$
 DECLARE
@@ -192,7 +197,8 @@ BEGIN
         f."ThanaName", f."ZilaName", f."WorkType", f."BloodGroup",
         f."WorkPlaceAddress", f."MobileNo", f."FacebookId", f."TShirtSize",
         f."IncludeDriver", f."AmountPaid", f."EntryDate", f."PassCode",
-        f."MemberLock", f."MemberStatus", ph."PhotoPath",
+        f."MemberLock", f."MemberStatus", ph."PhotoPath", f."Gender",
+        COALESCE(f."TotalSMSSent", 0),
         COUNT(*) OVER () AS "TotalCount"
     FROM hsc95."T_EventForm" f
     LEFT JOIN LATERAL (
@@ -217,6 +223,9 @@ $$ LANGUAGE plpgsql STABLE;
 -- 6. Single registration by EntryId (detail view)
 ----------------------------------------------------------------------
 
+-- Result columns changed (Gender, TotalSMSSent added), which CREATE OR REPLACE cannot do in place.
+DROP FUNCTION IF EXISTS hsc95.sp_get_registration_by_id(integer, integer);
+
 CREATE OR REPLACE FUNCTION hsc95.sp_get_registration_by_id(
     p_entryid integer,
     p_entryby integer DEFAULT NULL
@@ -240,7 +249,9 @@ RETURNS TABLE (
     "PassCode" character varying(8),
     "MemberLock" character(1),
     "MemberStatus" numeric(1,0),
-    "PhotoPath" text
+    "PhotoPath" text,
+    "Gender" character varying(5),
+    "TotalSMSSent" numeric
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -249,7 +260,8 @@ BEGIN
         f."ThanaName", f."ZilaName", f."WorkType", f."BloodGroup",
         f."WorkPlaceAddress", f."MobileNo", f."FacebookId", f."TShirtSize",
         f."IncludeDriver", f."AmountPaid", f."EntryDate", f."PassCode",
-        f."MemberLock", f."MemberStatus", ph."PhotoPath"
+        f."MemberLock", f."MemberStatus", ph."PhotoPath", f."Gender",
+        COALESCE(f."TotalSMSSent", 0)
     FROM hsc95."T_EventForm" f
     LEFT JOIN LATERAL (
         SELECT p."PhotoPath"
@@ -438,5 +450,58 @@ BEGIN
     FROM hsc95."T_Users" u
     INNER JOIN hsc95."T_UserType" t ON u."UserType" = t."UserTypeId"
     WHERE u."UserId" = v_userid;
+END;
+$$ LANGUAGE plpgsql;
+
+
+----------------------------------------------------------------------
+-- 11. SMS counter
+--    Gap: T_EventForm."TotalSMSSent" exists but nothing maintains it.
+--    Called after every SMS the gateway accepts (registration notice and
+--    token SMS). The column is numeric(2,0), so the count stops at 99
+--    instead of failing. Returns the new total (NULL if no such entry).
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_increment_sms_sent(
+    p_entryid integer
+)
+RETURNS numeric AS $$
+DECLARE
+    v_total numeric;
+BEGIN
+    UPDATE hsc95."T_EventForm"
+    SET "TotalSMSSent" = LEAST(COALESCE("TotalSMSSent", 0) + 1, 99)
+    WHERE "EntryId" = p_entryid
+    RETURNING "TotalSMSSent" INTO v_total;
+
+    RETURN v_total;
+END;
+$$ LANGUAGE plpgsql;
+
+
+----------------------------------------------------------------------
+-- 12. Member gender
+--    Gap: T_EventForm."Gender" (varchar(5)) exists, but db.txt's
+--    sp_insert_event_form has no gender parameter and is owned by
+--    postgres. The API calls this in the same transaction, right after the
+--    insert. Stored as 'M' (male) or 'F' (female); NULL clears it.
+--    Returns false if the entry does not exist.
+----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION hsc95.sp_set_event_form_gender(
+    p_entryid integer,
+    p_gender character varying(5)
+)
+RETURNS boolean AS $$
+BEGIN
+    IF p_gender IS NOT NULL AND p_gender NOT IN ('M', 'F') THEN
+        RAISE EXCEPTION 'Gender must be M or F' USING ERRCODE = '22023';
+    END IF;
+
+    UPDATE hsc95."T_EventForm"
+    SET "Gender" = p_gender
+    WHERE "EntryId" = p_entryid;
+
+    RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql;

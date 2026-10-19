@@ -82,6 +82,7 @@ export function TokensManager() {
       toast.error(sent > 0 ? `SMS stopped after ${sent} sent` : "SMS could not be sent", errorMessage(error));
     } finally {
       setSmsProgress(null);
+      result.reload(); // show the new SMS counts
     }
   };
 
@@ -227,17 +228,7 @@ function PrintPreview({ preview, onClose }: { preview: Preview; onClose: () => v
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-5">
-        <Alert tone="info" title="Download or print">
-          Load {TOKEN_W_PX} × {TOKEN_H_PX} px paper in the printer; every token prints on its own sheet, so nothing has to be cut.
-          “Print this token” prints the one shown, “Print all” prints every token in one print dialog, and “Download PDF” saves
-          the same pages as a file.
-        </Alert>
-        {pdf.error && <Alert tone="danger" title="PDF could not be created">{pdf.error}</Alert>}
-        {withoutPhoto > 0 && (
-          <Alert tone="warning" title={`${withoutPhoto} token(s) without a photo`}>
-            They will print with an empty photo box.
-          </Alert>
-        )}
+        
         {printer.report && printer.report.failed > 0 && (
           <Alert tone="warning" title={`${printer.report.failed} image(s) failed to load in the last print`}>
             Check those members&apos; photos and print again.

@@ -5,9 +5,15 @@ import { join, resolve, sep } from 'node:path';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { mimeForExtension, type PhotoExtension } from './photo-validation.js';
 
-/** Storage keys look like "photos/<uuid>.<ext>". This is what goes into T_Photos.PhotoPath. */
-const KEY_PATTERN = /^photos\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(jpg|png|webp)$/;
-const FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
+/**
+ * Storage keys look like "photos/<name>.<ext>"; this is what goes into
+ * T_Photos.PhotoPath. New photos are named after the token ("95-0043");
+ * photos saved before that keep their random UUID names.
+ */
+const NAME = '(?:\\d{2}-\\d{4,5}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})';
+const KEY_PATTERN = new RegExp(`^photos/${NAME}\\.(jpg|png|webp)$`);
+const FILE_PATTERN = new RegExp(`^${NAME}\\.(jpg|png|webp)$`);
+const TOKEN_NAME_PATTERN = /^\d{2}-\d{4,5}$/;
 
 export interface StoredPhoto {
   body: Buffer;
@@ -28,12 +34,17 @@ export class PhotoStorageService {
     this.root = config.uploads.dir;
   }
 
-  /** Save validated bytes under a server-generated name; returns the storage key. */
-  async save(body: Buffer, ext: PhotoExtension): Promise<string> {
-    const key = `photos/${randomUUID()}.${ext}`;
+  /**
+   * Save validated bytes; returns the storage key. With a token name
+   * ("95-0043") the file is photos/95-0043.<ext> (replacing a leftover file of
+   * that name); without one it gets a random name.
+   */
+  async save(body: Buffer, ext: PhotoExtension, tokenName?: string): Promise<string> {
+    if (tokenName !== undefined && !TOKEN_NAME_PATTERN.test(tokenName)) throw new Error('Invalid photo name');
+    const key = `photos/${tokenName ?? randomUUID()}.${ext}`;
     const path = this.pathFor(key);
     await mkdir(join(this.root, 'photos'), { recursive: true });
-    await writeFile(path, body, { flag: 'wx', mode: 0o640 });
+    await writeFile(path, body, { flag: tokenName ? 'w' : 'wx', mode: 0o640 });
     return key;
   }
 
@@ -63,7 +74,7 @@ export class PhotoStorageService {
     return typeof value === 'string' && KEY_PATTERN.test(value);
   }
 
-  /** "photos/<uuid>.jpg" -> "<uuid>.jpg" (used in admin photo URLs). */
+  /** "photos/95-0043.jpg" -> "95-0043.jpg" (used in admin photo URLs). */
   fileNameOf(key: string): string {
     return key.slice('photos/'.length);
   }

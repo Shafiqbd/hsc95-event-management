@@ -195,7 +195,9 @@ export const mockApi: ApiClient = {
       mobileNo,
       facebookId: text(form, "facebookId"),
       tShirtSize: text(form, "tShirtSize") ?? "",
+      gender: text(form, "gender") === "F" ? "F" : "M",
       includeDriver,
+      smsSent: 0,
       amountPaid,
       paymentStatus: "unverified",
       entryDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:00`,
@@ -207,7 +209,7 @@ export const mockApi: ApiClient = {
       tokenReady: true,
     });
     saveDb(db);
-    return delay({ entryId, formNo, amountPaid, paymentStatus: "unverified" as const }, 600);
+    return delay({ entryId, formNo, amountPaid, paymentStatus: "unverified" as const, sms: "skipped" as const }, 600);
   },
 
   adminStats: async () => {
@@ -265,7 +267,10 @@ export const mockApi: ApiClient = {
     const failed = entryIds
       .filter((id) => !ready.has(id))
       .map((entryId) => ({ entryId, formNo: null, mobileNo: null, reason: "Not an active registration with a token number" }));
-    // Demo mode never contacts the SMS gateway.
+    // Demo mode never contacts the SMS gateway; it only counts the "sent" messages.
+    const db = loadDb();
+    for (const r of db.registrations) if (entryIds.includes(r.entryId) && ready.has(r.entryId)) r.smsSent += 1;
+    saveDb(db);
     return delay({ requested: entryIds.length, sent: entryIds.length - failed.length, failed }, 300 + entryIds.length * 40);
   },
 

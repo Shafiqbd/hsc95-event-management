@@ -6,6 +6,7 @@ const valid = {
   memberName: '  রহিম   উদ্দিন ',
   mobileNo: '01711111111',
   tShirtSize: 'XL',
+  gender: 'M',
   includeDriver: 'false',
 };
 
@@ -24,9 +25,14 @@ describe('CreateRegistrationDto', () => {
     expect(dto.formNo).toBeUndefined();
   });
 
-  it('requires name, mobile and t-shirt size', async () => {
+  it('requires name, mobile, t-shirt size and gender', async () => {
     const { fields } = await errorsFor({});
-    expect(fields).toEqual(expect.arrayContaining(['memberName', 'mobileNo', 'tShirtSize']));
+    expect(fields).toEqual(expect.arrayContaining(['memberName', 'mobileNo', 'tShirtSize', 'gender']));
+  });
+
+  it('only accepts gender M or F', async () => {
+    expect((await errorsFor({ ...valid, gender: 'F' })).fields).toEqual([]);
+    expect((await errorsFor({ ...valid, gender: 'Male' })).fields).toContain('gender');
   });
 
   it('accepts an optional paper form number within numeric(5,0)', async () => {

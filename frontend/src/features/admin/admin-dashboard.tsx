@@ -47,7 +47,7 @@ export function AdminDashboard() {
 
       {stats.error != null && <Alert tone="danger" title="Statistics unavailable">{errorMessage(stats.error)}</Alert>}
       {stats.loading && !stats.data && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -72,7 +72,7 @@ function StatsView({ stats, own }: { stats: DashboardStats; own: boolean }) {
       hint: "Sum of AmountPaid — payments are not verified",
     },
     { label: "With photo", value: String(stats.withPhoto), icon: Camera, tone: "text-primary" },
-    { label: "Tokens ready to print", value: String(stats.tokensReady), icon: Ticket, tone: "text-success", hint: "Photo + form number" },
+    { label: "Tokens ready to print", value: String(stats.tokensReady), icon: Ticket, tone: "text-success", hint: "Active + token number" },
     { label: "Pass codes issued", value: String(stats.withPassCode), icon: KeyRound, tone: "text-violet" },
   ];
 
@@ -80,14 +80,14 @@ function StatsView({ stats, own }: { stats: DashboardStats; own: boolean }) {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {cards.map(({ label, value, icon: Icon, tone, hint }) => (
-          <Card key={label} className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted">{label}</p>
-              <Icon className={`h-5 w-5 ${tone}`} aria-hidden />
+          <Card key={label} className="min-w-0 p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-muted sm:text-sm">{label}</p>
+              <Icon className={`h-5 w-5 shrink-0 ${tone}`} aria-hidden />
             </div>
-            <p className="mt-2 text-3xl font-bold tabular-nums">{value}</p>
+            <p className="mt-2 text-2xl font-bold break-words tabular-nums sm:text-3xl">{value}</p>
             {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
           </Card>
         ))}

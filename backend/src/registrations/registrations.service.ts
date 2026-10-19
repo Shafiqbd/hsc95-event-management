@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { DataSource } from 'typeorm';
+import { tokenLabel } from '../common/token-number.js';
 import type { DuplicateCheckRow } from '../database/db-rows.js';
 import { PhotoStorageService } from '../storage/photo-storage.service.js';
 import { declaredTypeMatches, detectImageType } from '../storage/photo-validation.js';
@@ -58,7 +59,7 @@ export class RegistrationsService {
     }
 
     const amount = this.calculateAmount(dto.includeDriver);
-    const photoKey = photo && ext ? await this.storage.save(photo.buffer, ext) : null;
+    let photoKey: string | null = null;
 
     try {
       return await this.dataSource.transaction(async (manager) => {
@@ -110,7 +111,15 @@ export class RegistrationsService {
         );
         if (!entry) throw new Error('sp_insert_event_form returned no id');
 
-        if (photoKey) {
+        // sp_insert_event_form has no gender parameter; set it in the same transaction.
+        await manager.query(`SELECT sp_set_event_form_gender($1::integer, $2::varchar) AS "Updated";`, [
+          entry.EntryId,
+          dto.gender,
+        ]);
+
+        // Saved now that the token number is known: photos/95-0043.jpg.
+        if (photo && ext) {
+          photoKey = await this.storage.save(photo.buffer, ext, tokenLabel(formNo));
           await manager.query(`SELECT sp_insert_event_form_photo($1::numeric, $2::text, $3::numeric) AS "PhotoId";`, [
             entry.EntryId,
             photoKey,

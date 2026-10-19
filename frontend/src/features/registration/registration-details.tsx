@@ -1,5 +1,5 @@
 import { formatEntryDate, formatFormNo, formatTaka } from "@/lib/format";
-import { T_SHIRT_SIZES } from "@/config/event";
+import { genderLabel, T_SHIRT_SIZES } from "@/config/event";
 import type { Registration } from "@/types/api";
 import { Badge } from "@/components/ui/feedback";
 
@@ -24,6 +24,7 @@ export function RegistrationDetails({ registration: r }: { registration: Registr
   const rows: [string, string][] = [
     ["টোকেন নং", formatFormNo(r.formNo)],
     ["নাম", r.memberName],
+    ["লিঙ্গ", genderLabel(r.gender)],
     ["কলেজ", r.collegeName ?? "—"],
     ["থানা", r.thanaName ?? "—"],
     ["জেলা", r.zilaName ?? "—"],
@@ -34,6 +35,7 @@ export function RegistrationDetails({ registration: r }: { registration: Registr
     ["ফেইসবুক আইডি", r.facebookId ?? "—"],
     ["টি-শার্ট সাইজ", tShirtLabel(r.tShirtSize)],
     ["ড্রাইভার", r.includeDriver ? "হ্যাঁ" : "না"],
+    ["SMS পাঠানো হয়েছে", `${r.smsSent} টি`],
     ["টাকার পরিমাণ", formatTaka(r.amountPaid)],
     ["টোকেন নম্বর (পাসকোড)", r.passCode ?? "এখনো দেওয়া হয়নি"],
     ["নিবন্ধনের সময়", formatEntryDate(r.entryDate)],

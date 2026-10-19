@@ -40,6 +40,7 @@ describe('HTTP API', () => {
       .on('sp_check_registration_duplicate', () => [{ MobileNoExists: false, FormNoExists: false }])
       .on('sp_get_next_form_no', () => [{ FormNo: '1' }])
       .on('sp_insert_event_form', () => [{ EntryId: 9 }])
+      .on('sp_set_event_form_gender', () => [{ Updated: true }])
       .on('sp_insert_event_form_photo', () => [{ PhotoId: '1' }]);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -114,6 +115,7 @@ describe('HTTP API', () => {
         .field('memberName', 'রহিম উদ্দিন')
         .field('mobileNo', '01711111111')
         .field('tShirtSize', 'L')
+        .field('gender', 'M')
         .field('includeDriver', 'false')
         .attach('photo', JPEG, { filename: 'p.jpg', contentType: 'image/jpeg' });
 

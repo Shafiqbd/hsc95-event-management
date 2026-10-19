@@ -32,6 +32,19 @@ describe('PhotoStorageService', () => {
     await expect(storage.read(key)).resolves.toBeNull();
   });
 
+  it('names a photo after its token (95-0043) and still accepts older UUID names', async () => {
+    const key = await storage.save(JPEG, 'jpg', '95-0043');
+    expect(key).toBe('photos/95-0043.jpg');
+    expect(storage.keyFromFileName('95-0043.jpg')).toBe(key);
+    expect(storage.fileNameOf(key)).toBe('95-0043.jpg');
+    await expect(storage.save(JPEG, 'jpg', '95-0043')).resolves.toBe(key); // a leftover file is replaced
+    await expect(storage.read(key)).resolves.toMatchObject({ contentType: 'image/jpeg' });
+    expect(storage.isManagedKey('photos/b80980c4-6e7e-4e1e-a7b3-a81c5956b09b.jpg')).toBe(true);
+    await expect(storage.save(JPEG, 'jpg', '../x')).rejects.toThrow('Invalid photo name');
+    expect(storage.keyFromFileName('95-0043.jpg.exe')).toBeNull();
+    await storage.remove(key);
+  });
+
   it('refuses path traversal and foreign paths', async () => {
     expect(storage.keyFromFileName('../../.env')).toBeNull();
     expect(storage.keyFromFileName('..%2F.env')).toBeNull();

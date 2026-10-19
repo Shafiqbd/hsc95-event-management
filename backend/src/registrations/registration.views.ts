@@ -14,7 +14,11 @@ export interface RegistrationView {
   mobileNo: string | null;
   facebookId: string | null;
   tShirtSize: string;
+  /** 'M' | 'F'; null for registrations saved before the field existed. */
+  gender: 'M' | 'F' | null;
   includeDriver: boolean;
+  /** SMS accepted by the gateway for this registration (T_EventForm.TotalSMSSent). */
+  smsSent: number;
   amountPaid: number;
   /** No payment verification exists in the schema; see gap analysis. */
   paymentStatus: 'unverified';
@@ -59,7 +63,9 @@ export function toRegistrationView(row: RegistrationRow, photoUrl: PhotoUrlResol
     mobileNo: row.MobileNo,
     facebookId: row.FacebookId,
     tShirtSize: row.TShirtSize,
+    gender: row.Gender?.trim() === 'M' || row.Gender?.trim() === 'F' ? (row.Gender.trim() as 'M' | 'F') : null,
     includeDriver: row.IncludeDriver === 'Y',
+    smsSent: Number(row.TotalSMSSent ?? 0) || 0,
     amountPaid: Number(row.AmountPaid),
     paymentStatus: 'unverified',
     entryDate: row.EntryDate,

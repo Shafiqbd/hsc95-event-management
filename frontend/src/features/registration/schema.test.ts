@@ -8,6 +8,7 @@ const valid = {
   memberName: "রহিম উদ্দিন",
   mobileNo: "01711111111",
   tShirtSize: "L",
+  gender: "M",
   includeDriver: true,
   photo,
 };
@@ -22,9 +23,10 @@ describe("registrationSchema", () => {
     expect(issues(valid)).toEqual([]);
   });
 
-  it("requires name, mobile and t-shirt size; the photo is optional", () => {
+  it("requires name, mobile, t-shirt size and gender; the photo is optional", () => {
     const missing = issues({ formNo: "", includeDriver: false });
-    expect(missing).toEqual(expect.arrayContaining(["memberName", "mobileNo", "tShirtSize"]));
+    expect(missing).toEqual(expect.arrayContaining(["memberName", "mobileNo", "tShirtSize", "gender"]));
+    expect(issues({ ...valid, gender: "X" })).toEqual(["gender"]);
     expect(missing).not.toContain("photo");
     expect(issues({ ...valid, photo: undefined })).toEqual([]);
   });

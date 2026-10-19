@@ -119,6 +119,16 @@ const COLUMNS: Column[] = [
     cell: (r) =>
       !r.isActive ? <Badge tone="danger">Inactive</Badge> : r.tokenReady ? <Badge tone="success">Ready</Badge> : <Badge>Pending</Badge>,
   },
+  {
+    header: "SMS Sent",
+    className: "text-center",
+    cell: (r) =>
+      r.smsSent > 0 ? (
+        <Badge tone="info">{r.smsSent}</Badge>
+      ) : (
+        <span className="text-muted tabular-nums">0</span>
+      ),
+  },
 ];
 
 export function RegistrationsTable({
@@ -138,7 +148,9 @@ export function RegistrationsTable({
   const allPageSelected = selection && selectable.length > 0 && selectable.every((r) => selection.selected.has(r.entryId));
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-surface">
+    // relative: keeps absolutely positioned children (the sr-only "Actions" label) inside the scroll box,
+    // otherwise they widen the whole page on phones.
+    <div className="relative overflow-x-auto rounded-md border border-border bg-surface">
       <table className="w-full min-w-[56rem] text-left text-sm">
         <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-muted">
           <tr>

@@ -18,7 +18,7 @@ export function SiteFooter() {
           <ul className="space-y-1.5 text-muted">
             <li><Link className="hover:text-fg" href="/#event-info">ইভেন্ট তথ্য</Link></li>
             <li><Link className="hover:text-fg" href="/#registration">নিবন্ধনের নিয়ম</Link></li>
-            <li><Link className="hover:text-fg" href="/backend/login">স্টাফ লগইন</Link></li>
+            <li><Link className="hover:text-fg" href="/backend/login">অ্যাডমিন লগইন</Link></li>
           </ul>
         </nav>
         <div className="text-sm text-muted sm:text-right">

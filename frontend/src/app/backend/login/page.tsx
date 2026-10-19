@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
           <Emblem size={52} />
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <ShieldCheck className="h-6 w-6 text-violet" aria-hidden /> স্টাফ লগইন
+              <ShieldCheck className="h-6 w-6 text-violet" aria-hidden /> অ্যাডমিন লগইন
             </h1>
             <p className="text-sm text-muted">Admin · Register · Report Viewer</p>
           </div>

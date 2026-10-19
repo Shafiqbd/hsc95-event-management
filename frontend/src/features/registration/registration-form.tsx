@@ -1,23 +1,25 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Car, CheckCircle2, ChevronDown, ClipboardList, FileDown, Info, Printer, UserPlus } from "lucide-react";
+import { Car, CheckCircle2, ChevronDown, ClipboardList, FileDown, Printer, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Controller, useForm, useWatch, type DefaultValues } from "react-hook-form";
-import { Emblem } from "@/components/brand";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { fieldAria, FormLine, lineInputClass } from "@/components/ui/form-line";
 import { useToast } from "@/components/ui/toast";
-import { BLOOD_GROUPS, EVENT, T_SHIRT_SIZES } from "@/config/event";
+import { BLOOD_GROUPS, EVENT, GENDERS, T_SHIRT_SIZES } from "@/config/event";
 import { api, errorMessage } from "@/lib/api";
-import { formatFormNo, formatTaka, toBnDigits } from "@/lib/format";
+import { formatFormNo, formatTaka } from "@/lib/format";
 import { EntryPass } from "@/features/token/entry-pass";
 import { usePrintTokens } from "@/features/token/print-sheet";
 import { usePdfDownload } from "@/features/token/use-pdf-download";
 import type { EventFees, RegistrationResult, TokenData } from "@/types/api";
 import { PhotoPicker } from "./photo-picker";
 import { registrationSchema, toFormData, type RegistrationInput, type RegistrationValues } from "./schema";
+
+/** Narrower label column in the two-column (tablet+) layout, so every row lines up. */
+const LABEL_COL = "md:grid-cols-[6.5rem_1fr]";
 
 const DEFAULTS: DefaultValues<RegistrationInput> = {
   formNo: "",
@@ -95,7 +97,13 @@ export function RegistrationForm() {
         includeDriver: values.includeDriver,
         photo: values.photo,
       });
-      toast.success("নিবন্ধন সম্পন্ন হয়েছে", `${values.memberName} · টোকেন নং ${formatFormNo(result.formNo)}`);
+      toast.success(
+        "নিবন্ধন সম্পন্ন হয়েছে",
+        `${values.memberName} · টোকেন নং ${formatFormNo(result.formNo)}${result.sms === "sent" ? " · SMS পাঠানো হয়েছে" : ""}`,
+      );
+      if (result.sms === "failed") {
+        toast.error("SMS পাঠানো যায়নি", "নিবন্ধন সংরক্ষিত হয়েছে, কিন্তু নিশ্চিতকরণ SMS যায়নি।");
+      }
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     } catch (error) {
@@ -130,69 +138,76 @@ export function RegistrationForm() {
   const e = errors;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="rounded-md border border-border bg-surface shadow-soft">
-      {/* Header, as on the paper form */}
-      <div className="flex flex-col gap-6 border-b border-border p-6 sm:flex-row  sm:p-8 items-center j">
-        <div className="flex flex-1 items-start gap-4">
-          <Emblem size={100} />
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-primary sm:text-3xl">{EVENT.societyName}</h1>
-            <p className="text-lg font-semibold text-danger">{EVENT.celebration}</p>
-            <p className="mt-1 text-sm text-fg">
-              স্থান: {EVENT.venue}। তারিখ: {EVENT.dateBn}
-            </p>
-            <p className="mt-1 font-semibold text-violet">
-              রেজিস্ট্রেশন ফি : {toBnDigits(fees.registrationFee)}/- (ড্রাইভার-{toBnDigits(fees.driverFee)}/-)
-            </p>
-          </div>
-        </div>
-        <Controller
-          control={control}
-          name="photo"
-          render={({ field }) => (
-            <PhotoPicker value={field.value} onChange={field.onChange} error={e.photo?.message} />
-          )}
-        />
-      </div>
-
-      <div className="space-y-5 p-6 sm:p-8">
-        <FormLine
-          id="formNo"
-          label="টোকেন নং"
-          error={e.formNo?.message}
-          hint="কাগজের টোকেন নম্বর লিখুন"
-        >
-          <input
-            {...register("formNo")}
-            {...fieldAria("formNo", e.formNo?.message, "কাগজের টোকেন নম্বর লিখুন।")}
-            inputMode="numeric"
-            autoFocus
-            className={`${lineInputClass} max-w-40`}
+    <form onSubmit={onSubmit} noValidate className="rounded-md border border-border bg-surface p-5 shadow-soft sm:p-6">
+      {/* Compact two-column layout so the whole form fits on a laptop screen; the photo sits on the right. */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:gap-8">
+        <div className="flex justify-center lg:order-last lg:block">
+          <Controller
+            control={control}
+            name="photo"
+            render={({ field }) => <PhotoPicker value={field.value} onChange={field.onChange} error={e.photo?.message} />}
           />
-        </FormLine>
-
-        <FormLine id="memberName" label="নাম" required error={e.memberName?.message}>
-          <input {...register("memberName")} {...fieldAria("memberName", e.memberName?.message)} autoComplete="off" className={lineInputClass} />
-        </FormLine>
-
-        <FormLine id="collegeName" label="কলেজ" error={e.collegeName?.message}>
-          <input {...register("collegeName")} {...fieldAria("collegeName", e.collegeName?.message)} className={lineInputClass} />
-        </FormLine>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <FormLine id="thanaName" label="থানা" error={e.thanaName?.message}>
-            <input {...register("thanaName")} {...fieldAria("thanaName", e.thanaName?.message)} className={lineInputClass} />
-          </FormLine>
-          <FormLine id="zilaName" label="জেলা" error={e.zilaName?.message} className="lg:grid-cols-[4rem_1fr]">
-            <input {...register("zilaName")} {...fieldAria("zilaName", e.zilaName?.message)} className={lineInputClass} />
-          </FormLine>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <FormLine id="workType" label="পেশা" error={e.workType?.message}>
-            <input {...register("workType")} {...fieldAria("workType", e.workType?.message)} autoComplete="organization-title" className={lineInputClass} />
+        <div className="grid content-start gap-x-8 gap-y-3 md:grid-cols-2">
+          <FormLine id="formNo" label="টোকেন নং" error={e.formNo?.message} className={LABEL_COL}>
+            <input
+              {...register("formNo")}
+              {...fieldAria("formNo", e.formNo?.message)}
+              placeholder="কাগজের টোকেন নম্বর"
+              inputMode="numeric"
+              autoFocus
+              className={lineInputClass}
+            />
           </FormLine>
-          <FormLine id="bloodGroup" label="রক্তের গ্রুপ" error={e.bloodGroup?.message} className="lg:grid-cols-[7rem_1fr]">
+
+          <FormLine id="memberName" label="নাম" required error={e.memberName?.message} className={LABEL_COL}>
+            <input {...register("memberName")} {...fieldAria("memberName", e.memberName?.message)} placeholder="সদস্যের পুরো নাম" autoComplete="off" className={lineInputClass} />
+          </FormLine>
+
+          <fieldset className={`grid gap-1 sm:grid-cols-[9.5rem_1fr] sm:items-center sm:gap-3 ${LABEL_COL}`} aria-describedby={e.gender ? "gender-error" : undefined}>
+            <legend className="contents">
+              <span className="text-[15px] font-medium">
+                লিঙ্গ :<span className="ml-0.5 text-danger" aria-hidden>*</span>
+              </span>
+            </legend>
+            <div>
+              <div className="grid grid-cols-2 gap-2">
+                {GENDERS.map((g) => (
+                  <label
+                    key={g.value}
+                    className="flex cursor-pointer items-center justify-center rounded-md border-2 border-border bg-surface-2 px-3 py-1 font-semibold transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
+                  >
+                    <input type="radio" value={g.value} {...register("gender")} className="sr-only" />
+                    {g.label}
+                  </label>
+                ))}
+              </div>
+              {e.gender && (
+                <p id="gender-error" role="alert" className="mt-1 text-sm text-danger">
+                  {e.gender.message}
+                </p>
+              )}
+            </div>
+          </fieldset>
+
+          <FormLine id="collegeName" label="কলেজ" error={e.collegeName?.message} className={LABEL_COL}>
+            <input {...register("collegeName")} {...fieldAria("collegeName", e.collegeName?.message)} placeholder="এইচএসসি পাসের কলেজ" className={lineInputClass} />
+          </FormLine>
+
+          <FormLine id="thanaName" label="থানা" error={e.thanaName?.message} className={LABEL_COL}>
+            <input {...register("thanaName")} {...fieldAria("thanaName", e.thanaName?.message)} placeholder="থানার নাম" className={lineInputClass} />
+          </FormLine>
+
+          <FormLine id="zilaName" label="জেলা" error={e.zilaName?.message} className={LABEL_COL}>
+            <input {...register("zilaName")} {...fieldAria("zilaName", e.zilaName?.message)} placeholder="জেলার নাম" className={lineInputClass} />
+          </FormLine>
+
+          <FormLine id="workType" label="পেশা" error={e.workType?.message} className={LABEL_COL}>
+            <input {...register("workType")} {...fieldAria("workType", e.workType?.message)} placeholder="যেমন: চাকরি, ব্যবসা" autoComplete="organization-title" className={lineInputClass} />
+          </FormLine>
+
+          <FormLine id="bloodGroup" label="রক্তের গ্রুপ" error={e.bloodGroup?.message} className={LABEL_COL}>
             <div className="relative">
               <select
                 {...register("bloodGroup")}
@@ -209,93 +224,92 @@ export function RegistrationForm() {
               <ChevronDown className="pointer-events-none absolute right-1 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
             </div>
           </FormLine>
-        </div>
 
-        <FormLine id="workPlaceAddress" label="কর্মস্থলের ঠিকানা" error={e.workPlaceAddress?.message}>
-          <textarea {...register("workPlaceAddress")} {...fieldAria("workPlaceAddress", e.workPlaceAddress?.message)} rows={2} className={`${lineInputClass} resize-y`} />
-        </FormLine>
+          <FormLine id="mobileNo" label="মোবাইল নং" required error={e.mobileNo?.message} className={LABEL_COL}>
+            <input
+              {...register("mobileNo")}
+              {...fieldAria("mobileNo", e.mobileNo?.message)}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="01XXXXXXXXX"
+              className={lineInputClass}
+            />
+          </FormLine>
 
-        <FormLine id="mobileNo" label="মোবাইল নং" required error={e.mobileNo?.message} hint="মোবাইল নম্বর লিখুন ">
-          <input
-            {...register("mobileNo")}
-            {...fieldAria("mobileNo", e.mobileNo?.message, "মোবাইল নম্বর লিখুন")}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="01XXXXXXXXX"
-            className={lineInputClass}
-          />
-        </FormLine>
+          <FormLine id="facebookId" label="ফেইসবুক আইডি" error={e.facebookId?.message} className={LABEL_COL}>
+            <input {...register("facebookId")} {...fieldAria("facebookId", e.facebookId?.message)} placeholder="ফেইসবুক আইডি বা লিংক" className={lineInputClass} />
+          </FormLine>
 
-        <FormLine id="facebookId" label="ফেইসবুক আইডি" error={e.facebookId?.message}>
-          <input {...register("facebookId")} {...fieldAria("facebookId", e.facebookId?.message)} className={lineInputClass} />
-        </FormLine>
+          <FormLine id="workPlaceAddress" label="কর্মস্থলের ঠিকানা" error={e.workPlaceAddress?.message} className={`md:col-span-2 ${LABEL_COL}`}>
+            <input {...register("workPlaceAddress")} {...fieldAria("workPlaceAddress", e.workPlaceAddress?.message)} placeholder="অফিস / প্রতিষ্ঠানের ঠিকানা" className={lineInputClass} />
+          </FormLine>
 
-        <fieldset className="grid gap-2 sm:grid-cols-[9.5rem_1fr] sm:gap-3" aria-describedby={e.tShirtSize ? "tShirtSize-error" : undefined}>
-          <legend className="contents">
-            <span className="text-[15px] font-medium">
-              পোলো টি-শার্ট সাইজ :<span className="ml-0.5 text-danger" aria-hidden>*</span>
-            </span>
-          </legend>
-          <div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {T_SHIRT_SIZES.map((size) => (
-                <label
-                  key={size.value}
-                  className="flex cursor-pointer flex-col items-center rounded-md border-2 border-border bg-surface-2 px-3 py-3 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
-                >
-                  <input type="radio" value={size.value} {...register("tShirtSize")} className="sr-only" />
-                  <span className="text-lg font-bold">{size.label}</span>
-                  <span className="text-xs text-muted">({size.measure})</span>
-                </label>
-              ))}
+          <fieldset
+            className={`grid gap-1 sm:grid-cols-[9.5rem_1fr] sm:items-center sm:gap-3 md:col-span-2 ${LABEL_COL}`}
+            aria-describedby={e.tShirtSize ? "tShirtSize-error" : undefined}
+          >
+            <legend className="contents">
+              <span className="text-[15px] font-medium">
+                পোলো টি-শার্ট সাইজ :<span className="ml-0.5 text-danger" aria-hidden>*</span>
+              </span>
+            </legend>
+            <div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {T_SHIRT_SIZES.map((size) => (
+                  <label
+                    key={size.value}
+                    className="flex cursor-pointer items-baseline justify-center gap-1.5 rounded-md border-2 border-border bg-surface-2 px-2 py-1 transition-colors hover:border-primary/60 has-checked:border-primary has-checked:bg-primary/10 has-focus-visible:ring-2 has-focus-visible:ring-ring"
+                  >
+                    <input type="radio" value={size.value} {...register("tShirtSize")} className="sr-only" />
+                    <span className="font-bold">{size.label}</span>
+                    <span className="text-xs text-muted">({size.measure})</span>
+                  </label>
+                ))}
+              </div>
+              {e.tShirtSize && (
+                <p id="tShirtSize-error" role="alert" className="mt-1 text-sm text-danger">
+                  {e.tShirtSize.message}
+                </p>
+              )}
             </div>
-            {e.tShirtSize && (
-              <p id="tShirtSize-error" role="alert" className="mt-1 text-sm text-danger">
-                {e.tShirtSize.message}
-              </p>
-            )}
+          </fieldset>
+
+          <div className={`grid gap-1 sm:grid-cols-[9.5rem_1fr] sm:items-center sm:gap-3 ${LABEL_COL}`}>
+            <span className="text-[15px] font-medium">ড্রাইভার :</span>
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border-2 border-border bg-surface-2 px-3 py-1 has-checked:border-success has-checked:bg-success/10">
+              <input type="checkbox" {...register("includeDriver")} className="h-4 w-4 accent-[var(--success)]" />
+              <Car className="h-4 w-4 shrink-0 text-success" aria-hidden />
+              <span className="text-sm">
+                সঙ্গে ড্রাইভার <span className="text-muted">(+{formatTaka(fees.driverFee)})</span>
+              </span>
+            </label>
           </div>
-        </fieldset>
 
-        <div className="grid gap-2 sm:grid-cols-[9.5rem_1fr] sm:gap-3">
-          <span className="text-[15px] font-medium">ড্রাইভার :</span>
-          <label className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-border bg-surface-2 p-3 has-checked:border-success has-checked:bg-success/10">
-            <input type="checkbox" {...register("includeDriver")} className="h-5 w-5 accent-[var(--success)]" />
-            <Car className="h-5 w-5 text-success" aria-hidden />
-            <span>
-              সঙ্গে ড্রাইভার থাকবেন <span className="text-muted">(অতিরিক্ত {formatTaka(fees.driverFee)})</span>
-            </span>
-          </label>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-[9.5rem_1fr] sm:gap-3">
-          <span className="text-[15px] font-medium">টাকার পরিমাণ :</span>
-          <div>
-            <p className="border-b-2 border-dotted border-border px-1 py-2 text-xl font-bold text-gold" aria-live="polite">
+          <div className={`grid gap-1 sm:grid-cols-[9.5rem_1fr] sm:items-center sm:gap-3 ${LABEL_COL}`}>
+            <span className="text-[15px] font-medium">টাকার পরিমাণ :</span>
+            <p className="border-b-2 border-dotted border-border px-2 py-0.5 text-xl font-bold text-gold" aria-live="polite">
               {formatTaka(amount)}
             </p>
-            <p className="mt-2 flex gap-2 text-sm text-muted">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              নগদ বা বিকাশ/নগদের পেমেন্টের তথ্য সংরক্ষণের ঘর ডাটাবেসে নেই, তাই পেমেন্ট “যাচাই হয়নি” হিসেবে দেখাবে।
-            </p>
           </div>
         </div>
+      </div>
 
-        {serverError && (
+      {serverError && (
+        <div className="mt-4">
           <Alert tone="danger" title="নিবন্ধন সম্পন্ন হয়নি">
             {serverError}
           </Alert>
-        )}
-
-        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted">
-            <span className="text-danger">*</span> চিহ্নিত ঘরগুলো পূরণ করা আবশ্যক
-          </p>
-          <Button type="submit" size="lg" variant="gold" loading={isSubmitting}>
-            {isSubmitting ? "জমা হচ্ছে…" : "নিবন্ধন জমা দিন"}
-          </Button>
         </div>
+      )}
+
+      <div className="mt-4 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted">
+          <span className="text-danger">*</span> চিহ্নিত ঘরগুলো পূরণ করা আবশ্যক
+        </p>
+        <Button type="submit" variant="gold" loading={isSubmitting}>
+          {isSubmitting ? "জমা হচ্ছে…" : "নিবন্ধন জমা দিন"}
+        </Button>
       </div>
     </form>
   );

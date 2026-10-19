@@ -61,6 +61,7 @@ export function LoginForm() {
           {...register("loginName")}
           {...fieldAria("loginName", errors.loginName?.message)}
           autoComplete="username"
+          placeholder="আপনার লগইন নাম লিখুন"
           className={boxInputClass}
         />
         {errors.loginName && (
@@ -78,6 +79,7 @@ export function LoginForm() {
           {...fieldAria("password", errors.password?.message)}
           type="password"
           autoComplete="current-password"
+          placeholder="আপনার পাসওয়ার্ড লিখুন"
           className={boxInputClass}
         />
         {errors.password && (
