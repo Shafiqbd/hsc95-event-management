@@ -14,7 +14,7 @@ const bengali = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(process.env.SITE_URL ?? "https://hsc95society.com:443"),
   title: {
     default: `${EVENT.societyName} — ${EVENT.celebration}`,
     template: `%s | ${EVENT.societyNameEn}`,

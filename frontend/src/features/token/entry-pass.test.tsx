@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TokenData } from "@/types/api";
-import { EntryPass, TOKEN_BACKGROUND_SRC } from "./entry-pass";
+import { DEFAULT_AVATAR_SRC, EntryPass, TOKEN_BACKGROUND_SRC } from "./entry-pass";
 import { chunk, TOKENS_PER_PAGE, waitForImages } from "./print";
 import { PrintPages } from "./print-sheet";
 
@@ -44,9 +44,9 @@ describe("EntryPass", () => {
     expect(screen.getAllByText("With Driver")).toHaveLength(1);
   });
 
-  it("shows a placeholder when there is no photo", () => {
+  it("shows the default avatar when there is no photo", () => {
     render(<EntryPass token={token(3, null)} />);
-    expect(screen.getByLabelText("ছবি নেই")).toBeInTheDocument();
+    expect(screen.getByAltText("ছবি নেই")).toHaveAttribute("src", DEFAULT_AVATAR_SRC);
   });
 });
 

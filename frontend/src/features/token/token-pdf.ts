@@ -1,9 +1,16 @@
 import type { TokenData } from "@/types/api";
-import { TOKEN_BACKGROUND_SRC, TOKEN_GEOMETRY, TOKEN_H_PX, TOKEN_W_PX, tokenDetails } from "./entry-pass";
+import {
+  DEFAULT_AVATAR_SRC,
+  TOKEN_BACKGROUND_SRC,
+  TOKEN_GEOMETRY,
+  TOKEN_H_PX,
+  TOKEN_W_PX,
+  tokenDetails,
+} from "./entry-pass";
 
 /**
  * PDF layout: every page is one token, and the page IS the paper size
- * (391 x 399 CSS px = 293.25 x 299.25 pt), so nothing has to be cut.
+ * (614 x 767 CSS px = 460.5 x 575.25 pt), so nothing has to be cut.
  * The artwork is stretched to that shape; the photo is cover-fitted.
  */
 const PAGE_W_PT = TOKEN_W_PX * 0.75;
@@ -83,7 +90,8 @@ async function renderToken(token: TokenData, fontFamily: string): Promise<HTMLCa
   const ph = pct(p.height) * CANVAS_H;
   ctx.fillStyle = "#f3f1fa";
   ctx.fillRect(px, py, pw, ph);
-  const photo = token.photoUrl ? await loadImage(token.photoUrl) : null;
+  let photo = token.photoUrl ? await loadImage(token.photoUrl) : null;
+  if (!photo || photo.naturalWidth === 0) photo = await loadImage(DEFAULT_AVATAR_SRC);
   if (photo && photo.naturalWidth > 0) {
     const scale = Math.max(pw / photo.naturalWidth, ph / photo.naturalHeight);
     const sw = pw / scale;
@@ -149,7 +157,7 @@ export interface PdfProgress {
 }
 
 /**
- * Build a PDF with one 391 x 399 px token per page (token no., name,
+ * Build a PDF with one 614 x 767 px token per page (token no., name,
  * mobile, T-shirt size and driver) and trigger a file download.
  * Runs entirely in the browser.
  */

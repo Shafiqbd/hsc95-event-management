@@ -181,7 +181,7 @@ API (`/api` prefix): `GET event` · `POST auth/login` · `POST auth/logout` · `
   nothing to cut. Load paper of that size in the printer. Browser print uses
   `@page { size: 391px 399px; margin: 0 }`; **Download PDF** (`token-pdf.ts`) produces the same
   page size, one token per page.
-- Background: `frontend/public/images/token-background.jpg`, the supplied 294 × 366 px artwork,
+- Background: `frontend/public/images/token-background.jpeg`, the supplied 294 × 366 px artwork,
   stretched to 391 × 399. The photo is cover-fitted into the photo box (never distorted).
 - `EntryPass` (`frontend/src/features/token/entry-pass.tsx`) shows, top to bottom: token no.,
   name, mobile, T-shirt size and a green **With Driver** badge when a driver is

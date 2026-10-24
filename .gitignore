@@ -17,3 +17,7 @@ backend/.test-storage/
 
 .DS_Store
 *.log
+
+# production build output (contains backend .env secrets and member photos) — never commit
+release/*.tar.gz
+release/hsc95/

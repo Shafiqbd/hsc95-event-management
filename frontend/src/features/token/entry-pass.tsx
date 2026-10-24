@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element --
    Plain <img> on purpose: photos are session-protected API images and the
    print flow must observe each image's load/decode state before printing. */
-import { UserRound } from "lucide-react";
 import { formatFormNo } from "@/lib/format";
 import type { Registration, TokenData } from "@/types/api";
 
@@ -29,24 +28,27 @@ export function tokenDetails(token: TokenData) {
   };
 }
 
-export const TOKEN_BACKGROUND_SRC = "/images/token-background.jpg";
+export const TOKEN_BACKGROUND_SRC = "/images/token-background.jpeg";
+
+/** Shown when a member has no photo, or their photo fails to load. */
+export const DEFAULT_AVATAR_SRC = "/images/default-avatar.svg";
 
 /**
- * Printed token / paper size in CSS px (96 per inch: 103.45 x 105.57 mm).
- * The 294 x 366 artwork is stretched to this shape; the photo is cover-fitted.
+ * Printed token / paper size in CSS px (96 per inch: 162.46 x 202.94 mm).
+ * The 614 x 764 artwork is stretched to this shape; the photo is cover-fitted.
  */
-export const TOKEN_W_PX = 391;
-export const TOKEN_H_PX = 399;
+export const TOKEN_W_PX = 614;
+export const TOKEN_H_PX = 767;
 
 /**
- * Areas inside the supplied 294 x 366 px artwork, measured from the pixel
- * borders of its boxes (photo box x 75-218 / y 66-208, info box x 19-274 /
- * y 227-301) and expressed as percentages, so they follow the artwork when
- * it is stretched to the token size.
+ * Areas inside the supplied 614 x 764 px artwork, measured from the inner
+ * pixel borders of its boxes (photo box x 158-455 / y 138-435, info box
+ * x 41-572 / y 534-691) and expressed as percentages, so they follow the
+ * artwork when it is stretched to the token size.
  */
 export const TOKEN_GEOMETRY = {
-  photo: { left: "25.51%", top: "18.03%", width: "48.98%", height: "39.07%" },
-  info: { left: "6.46%", top: "62.02%", width: "87.07%", height: "20.49%" },
+  photo: { left: "25.73%", top: "18.06%", width: "48.53%", height: "39.01%" },
+  info: { left: "6.68%", top: "69.9%", width: "86.64%", height: "20.68%" },
 } as const;
 const PHOTO_BOX = TOKEN_GEOMETRY.photo;
 const INFO_BOX = TOKEN_GEOMETRY.info;
@@ -65,19 +67,17 @@ export function EntryPass({ token }: { token: TokenData }) {
       />
 
       <div className="absolute overflow-hidden bg-[#f3f1fa]" style={PHOTO_BOX}>
-        {token.photoUrl ? (
-          <img
-            src={token.photoUrl}
-            alt={`${token.memberName} এর ছবি`}
-            loading="eager"
-            decoding="sync"
-            className="h-full w-full object-cover object-top"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[#9c96c4]" aria-label="ছবি নেই">
-            <UserRound style={{ width: "40%", height: "40%" }} aria-hidden />
-          </div>
-        )}
+        <img
+          src={token.photoUrl || DEFAULT_AVATAR_SRC}
+          alt={token.photoUrl ? `${token.memberName} এর ছবি` : "ছবি নেই"}
+          loading="eager"
+          decoding="sync"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (!img.src.endsWith(DEFAULT_AVATAR_SRC)) img.src = DEFAULT_AVATAR_SRC;
+          }}
+          className="h-full w-full object-cover object-top"
+        />
       </div>
 
       <div
