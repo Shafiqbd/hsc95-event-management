@@ -8,11 +8,13 @@ import type { AppConfig } from './config/app-config.js';
 export function configureApp(app: INestApplication, config: Pick<AppConfig, 'frontendUrl'>): void {
   const express = app as NestExpressApplication;
   express.disable('x-powered-by');
-  // Behind the Next.js proxy / a reverse proxy: trust one hop for client IPs (rate limiting).
+  // Behind a reverse proxy (Nginx in production): trust one hop for client IPs (rate limiting).
   express.set('trust proxy', 1);
 
   app.setGlobalPrefix('api');
-  app.use(helmet());
+  // The frontend is on another origin (e.g. :3000 → :4000, or hsc95society.com →
+  // api.hsc95society.com) and shows member photos served by this API.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
   app.use(cookieParser());
   app.enableCors({
     origin: config.frontendUrl,

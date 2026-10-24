@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:prod": "SITE_URL=https://hsc95society.com NEXT_PUBLIC_API_MODE=live NEXT_PUBLIC_API_BASE_URL=/api next build",
+    "build:prod": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

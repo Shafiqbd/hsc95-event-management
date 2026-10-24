@@ -86,7 +86,8 @@ describe("LoginForm", () => {
 
     expect(await screen.findByText("লগইন নাম বা পাসওয়ার্ড সঠিক নয়।")).toBeInTheDocument();
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/auth/login");
+    expect(url).toBe("http://localhost:4000/api/auth/login");
+    expect(init.credentials).toBe("include");
     expect(new Headers(init.headers).get("X-Requested-With")).toBe("XMLHttpRequest");
   });
 });

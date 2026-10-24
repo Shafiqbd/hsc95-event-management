@@ -1,3 +1,4 @@
+import { API_URL } from "@/lib/live-api";
 import type { TokenData } from "@/types/api";
 import {
   DEFAULT_AVATAR_SRC,
@@ -28,6 +29,12 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     cached = new Promise((resolve) => {
       const img = new Image();
       img.decoding = "async";
+      // Images from other origins must be loaded with CORS, otherwise the canvas
+      // is "tainted" and the PDF cannot be created. API photos need the session cookie.
+      const origin = /^https?:/i.test(src) ? new URL(src).origin : null;
+      if (origin && origin !== window.location.origin) {
+        img.crossOrigin = origin === new URL(API_URL).origin ? "use-credentials" : "anonymous";
+      }
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;

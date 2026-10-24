@@ -20,7 +20,7 @@ db.txt      supplied PostgreSQL specification (unchanged)
 
 ```bash
 cd frontend
-cp .env.example .env.local     # NEXT_PUBLIC_API_MODE=mock
+echo NEXT_PUBLIC_API_MODE=mock > .env   # demo data, no backend
 npm install
 npm run dev                    # http://localhost:3000
 ```
@@ -40,8 +40,8 @@ In demo mode:
   real A4 PDF file in the browser.
 - **Reset demo data** in the admin sidebar restores the original data.
 
-**Connecting the real API later:** set `NEXT_PUBLIC_API_MODE=live` in `frontend/.env.local`,
-run the backend, and restart `npm run dev` (or rebuild). Nothing else changes; the screens use
+**Connecting the real API:** put `NEXT_PUBLIC_API_URL=http://localhost:4000/api` in
+`frontend/.env` (see `.env.example`), run the backend, and restart `npm run dev` (or rebuild). Nothing else changes; the screens use
 the same API interface (`frontend/src/lib/api.ts`).
 
 ## Architecture
@@ -88,7 +88,7 @@ npm run start:dev           # http://localhost:4000/api
 
 # 3. Frontend (second terminal)
 cd frontend
-cp .env.example .env.local
+cp .env.example .env           # NEXT_PUBLIC_API_URL=http://localhost:4000/api
 npm install
 npm run dev                 # http://localhost:3000
 ```
@@ -110,14 +110,17 @@ except your own machine.**
 | `UPLOAD_DIR`, `PHOTO_MAX_BYTES` | Photo storage folder (outside the source tree) and size limit (2 MB) |
 | `EVENT_REGISTRATION_FEE`, `EVENT_DRIVER_FEE` | **Authoritative** fees; the stored `AmountPaid` = fee + (driver ? driver fee : 0) |
 
-**frontend/.env.local**
+**frontend/.env** — one setting:
 
-| Variable | Notes |
-|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | Keep `/api` |
-| `API_PROXY_TARGET` | Server-only URL of the NestJS API, read when `next dev` / `next build` starts |
-| `SESSION_COOKIE_NAME` | Same as the backend; only used for login redirects |
-| `SITE_URL` | Public URL (Open Graph) |
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
+```
+
+The browser calls this API address directly (no proxy). It is built into the site, so after
+changing it restart `npm run dev` or rebuild. In production use the public API address (e.g.
+`https://hsc95society.com/api`), and set the backend's `FRONTEND_URL` to the site's address so
+the API accepts its requests (CORS). Leave the URL out (or add `NEXT_PUBLIC_API_MODE=mock`) to
+run on demo data without a backend. Images from `https://hsc95society.com` can be used in the site.
 
 Event text (name, venue, date, welcome message, confirmed facilities) lives in
 `frontend/src/config/event.ts`. When fees change, update the backend env **and** `displayFees` in

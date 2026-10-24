@@ -55,8 +55,8 @@ _Last updated: 18 October 2026_
    npm run build
    npm run create-user -- --name "Your Name" --login admin --email you@example.com --role admin
    ```
-4. **Switch the frontend to the real API.** In `frontend/.env.local` set
-   `NEXT_PUBLIC_API_MODE=live`, then start both apps (section 4).
+4. **Frontend → real API.** `frontend/.env` contains `NEXT_PUBLIC_API_URL=http://localhost:4000/api`
+   (the browser calls the API directly, no proxy). Start both apps (section 4).
 5. Log in at `/backend/login` as that admin, then create the **Register** and
    **Report Viewer** users on the **Users** page.
 
@@ -76,7 +76,7 @@ automatically):
 - `backend/.env`: contains the **database password** and `AUTH_SECRET`. Copy it privately
   (USB or a password manager). Don't email it or upload it anywhere public. If it's lost, rebuild
   it from `backend/.env.example`.
-- `frontend/.env.local`: no secrets. It can be recreated from `frontend/.env.example`.
+- `frontend/.env`: no secrets, one line (`NEXT_PUBLIC_API_URL=...`); same as `frontend/.env.example`.
 
 **Install packages**
 ```bash
@@ -86,7 +86,7 @@ cd ../frontend && npm install
 
 ## 4. Running
 
-**Demo mode (no database needed).** `frontend/.env.local` has `NEXT_PUBLIC_API_MODE=mock`:
+**Demo mode (no database needed).** Put `NEXT_PUBLIC_API_MODE=mock` in `frontend/.env`:
 ```bash
 cd frontend
 npm run dev          # open http://localhost:3000
@@ -99,7 +99,7 @@ Demo logins at `/backend/login` (there are one-click buttons):
 | Register | `desk` | `desk123` |
 | Report Viewer | `viewer` | `viewer123` |
 
-**Real mode** (after section 2). Set `NEXT_PUBLIC_API_MODE=live`, then:
+**Real mode** (after section 2). `frontend/.env` has `NEXT_PUBLIC_API_URL=http://localhost:4000/api`, then:
 ```bash
 cd backend  && npm run start:dev     # API on http://localhost:4000/api
 cd frontend && npm run dev           # site on http://localhost:3000

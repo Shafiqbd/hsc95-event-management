@@ -20,4 +20,5 @@ backend/.test-storage/
 
 # production build output (contains backend .env secrets and member photos) — never commit
 release/*.tar.gz
+release/*.zip
 release/hsc95/
