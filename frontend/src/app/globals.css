@@ -97,7 +97,7 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Entry pass (token): 391 x 399 px, the artwork stretched to fit.      */
+/* Entry pass (token): 614 x 767 px, the artwork stretched to fit.      */
 /* Geometry is in percentages; text in container units, so preview ==  */
 /* print at any size.                                                   */
 /* ------------------------------------------------------------------ */
@@ -105,7 +105,7 @@ body {
 .entry-pass {
   position: relative;
   width: 100%;
-  aspect-ratio: 391 / 399;
+  aspect-ratio: 614 / 767;
   container-type: inline-size;
   overflow: hidden;
   background: #fff;
@@ -124,9 +124,9 @@ body {
 }
 
 @media print {
-  /* The paper is the token: one 391 x 399 px sheet per token, no cutting. */
+  /* The paper is the token: one 614 x 767 px sheet per token, no cutting. */
   @page {
-    size: 391px 399px;
+    size: 614px 767px;
     margin: 0;
   }
 
@@ -151,8 +151,8 @@ body {
   }
 
   .print-page {
-    width: 391px;
-    height: 399px;
+    width: 614px;
+    height: 767px;
     overflow: hidden;
     break-after: page;
     page-break-after: always;
@@ -164,8 +164,8 @@ body {
   }
 
   .print-page .entry-pass {
-    width: 391px;
-    height: 399px;
+    width: 614px;
+    height: 767px;
     break-inside: avoid;
     page-break-inside: avoid;
   }
