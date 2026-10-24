@@ -17,3 +17,6 @@ backend/.test-storage/
 
 .DS_Store
 *.log
+
+# production build archives (see release/DEPLOY.md)
+release/*.tar.gz
